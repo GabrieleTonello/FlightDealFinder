@@ -7,8 +7,8 @@ group = 'com.flightdeal'
 version = '1.0.0'
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 repositories {
@@ -23,6 +23,9 @@ def jacksonVersion = '2.18.3'
 dependencies {
     // Smithy code generation plugin (build-time)
     smithyBuild 'software.amazon.smithy.java:client-codegen:0.0.3'
+
+    // Smithy Java runtime (required by generated code)
+    implementation 'software.amazon.smithy.java:client-core:0.0.3'
 
     // Smithy model dependency
     implementation "software.amazon.smithy:smithy-model:${smithyVersion}"

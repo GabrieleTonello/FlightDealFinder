@@ -6,14 +6,14 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
 
 ## Tasks
 
-- [ ] 1. Set up project structure, Smithy models, and code generation
+- [x] 1. Set up project structure, Smithy models, and code generation
   - [x] 1.1 Initialize Gradle project under `service/` with Java 25, JUnit 5, jqwik, and Smithy codegen dependencies in `build.gradle`
     - Configure `sourceCompatibility = 25`, add `jqwik` and `junit-jupiter` test dependencies, and Smithy Gradle plugin for Java code generation
     - _Requirements: 20.1, 20.3, 20.4, 20.6_
   - [x] 1.2 Create Smithy model files under `smithy/model/`
     - Create `model.smithy` with all data shapes (FlightDeal, TimeWindow, DateRange, PriceRecord, DealBatchMessage, SearchError, FlightSearchResult, CalendarLookupInput/Output, MatchInput/Output, NotificationInput/Output, WorkflowStartResult) and `services.smithy` with service interfaces (FlightSearchService, CalendarService, FlightMatcherService, NotificationService)
     - _Requirements: 16.1, 16.2_
-  - [-] 1.3 Verify Smithy code generation produces Java types
+  - [x] 1.3 Verify Smithy code generation produces Java types
     - Run Gradle build to confirm generated Java types compile and are available in `service/` source sets
     - _Requirements: 16.3, 16.4_
 

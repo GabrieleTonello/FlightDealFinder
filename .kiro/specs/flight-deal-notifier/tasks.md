@@ -13,7 +13,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 1.2 Create Smithy model files under `smithy/model/`
     - Create `model.smithy` with all data shapes (FlightDeal, TimeWindow, DateRange, PriceRecord, DealBatchMessage, SearchError, FlightSearchResult, CalendarLookupInput/Output, MatchInput/Output, NotificationInput/Output, WorkflowStartResult) and `services.smithy` with service interfaces (FlightSearchService, CalendarService, FlightMatcherService, NotificationService)
     - _Requirements: 16.1, 16.2_
-  - [~] 1.3 Verify Smithy code generation produces Java types
+  - [-] 1.3 Verify Smithy code generation produces Java types
     - Run Gradle build to confirm generated Java types compile and are available in `service/` source sets
     - _Requirements: 16.3, 16.4_
 

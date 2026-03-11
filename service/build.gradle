@@ -1,0 +1,96 @@
+plugins {
+    id 'java-library'
+    id 'software.amazon.smithy.gradle.smithy-base' version '1.4.0'
+}
+
+group = 'com.flightdeal'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+def awsSdkVersion = '2.31.1'
+def smithyVersion = '1.68.0'
+def jacksonVersion = '2.18.3'
+
+dependencies {
+    // Smithy code generation plugin (build-time)
+    smithyBuild 'software.amazon.smithy.java:client-codegen:0.0.3'
+
+    // Smithy model dependency
+    implementation "software.amazon.smithy:smithy-model:${smithyVersion}"
+
+    // AWS SDK v2 BOM for dependency management
+    implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
+
+    // AWS SDK v2 service clients
+    implementation 'software.amazon.awssdk:lambda'
+    implementation 'software.amazon.awssdk:dynamodb'
+    implementation 'software.amazon.awssdk:sns'
+    implementation 'software.amazon.awssdk:sqs'
+    implementation 'software.amazon.awssdk:sfn'
+    implementation 'software.amazon.awssdk:cloudwatch'
+    implementation 'software.amazon.awssdk:ses'
+
+    // AWS Lambda Java runtime
+    implementation 'com.amazonaws:aws-lambda-java-core:1.2.3'
+    implementation 'com.amazonaws:aws-lambda-java-events:3.14.0'
+
+    // Jackson JSON serialization
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+
+    // JUnit 5 test framework
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    // jqwik property-based testing
+    testImplementation 'net.jqwik:jqwik:1.9.3'
+
+    // Mockito for test mocking
+    testImplementation 'org.mockito:mockito-core:5.15.2'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.15.2'
+}
+
+// Add Smithy-generated Java sources to the main source set
+afterEvaluate {
+    def clientPath = smithy.getPluginProjectionPath(smithy.sourceProjection.get(), 'java-client-codegen')
+    sourceSets {
+        main {
+            java {
+                srcDir clientPath
+            }
+        }
+    }
+}
+
+// Ensure Smithy code generation runs before Java compilation
+tasks.named('compileJava') {
+    dependsOn 'smithyBuild'
+}
+
+// Configure Smithy model source directory
+smithy {
+    smithyBuildConfigs.set(project.files("smithy-build.json"))
+}
+
+test {
+    useJUnitPlatform()
+
+    // Enable jqwik test engine
+    jvmArgs '--add-opens', 'java.base/java.lang.reflect=ALL-UNNAMED'
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}

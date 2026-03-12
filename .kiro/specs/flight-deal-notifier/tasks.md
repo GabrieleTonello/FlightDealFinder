@@ -27,25 +27,25 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 2.3 Create `FlightSearchHandler.java` under `service/src/main/java/com/flightdeal/handler/`
     - Implement Lambda handler: iterate configured destinations, call FlightApiClient per destination with error isolation, write deals to DynamoDB (retry 3x exponential backoff), publish deal batch to SNS (retry 3x exponential backoff), emit metrics
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 4.1, 4.2, 4.3, 11.1_
-  - [ ]* 2.4 Write property test: All configured destinations are queried
+  - [x]* 2.4 Write property test: All configured destinations are queried
     - **Property 1: All configured destinations are queried**
     - **Validates: Requirements 2.1**
-  - [ ]* 2.5 Write property test: Deal extraction preserves all required fields
+  - [x]* 2.5 Write property test: Deal extraction preserves all required fields
     - **Property 2: Deal extraction preserves all required fields**
     - **Validates: Requirements 2.2, 4.2**
-  - [ ]* 2.6 Write property test: Per-destination error isolation
+  - [x]* 2.6 Write property test: Per-destination error isolation
     - **Property 3: Per-destination error isolation**
     - **Validates: Requirements 2.3**
-  - [ ]* 2.7 Write property test: DynamoDB write correctness
+  - [x]* 2.7 Write property test: DynamoDB write correctness
     - **Property 4: DynamoDB write correctness**
     - **Validates: Requirements 3.1, 3.2**
-  - [ ]* 2.8 Write property test: Retry with exponential backoff
+  - [x]* 2.8 Write property test: Retry with exponential backoff
     - **Property 5: Retry with exponential backoff**
     - **Validates: Requirements 3.3, 4.3**
-  - [ ]* 2.9 Write property test: Deal batch published after storage
+  - [x]* 2.9 Write property test: Deal batch published after storage
     - **Property 6: Deal batch published after storage**
     - **Validates: Requirements 4.1**
-  - [ ]* 2.10 Write unit tests for FlightSearchHandler
+  - [x]* 2.10 Write unit tests for FlightSearchHandler
     - Test success path (deals found for all destinations), partial failures (some destinations fail), all destinations fail, empty results, DynamoDB write retry exhaustion, SNS publish retry exhaustion
     - Mock FlightApiClient, DynamoDB client, SNS client using Mockito
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.3, 4.1, 4.3, 17.1, 17.5_
@@ -57,10 +57,10 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 4.1 Create `WorkflowTriggerHandler.java` under `service/src/main/java/com/flightdeal/handler/`
     - Implement Lambda handler: parse DealBatchMessage from SQS event, start Step Functions execution with deal data as input, emit metrics (workflows started, start failures), throw on StartExecution failure so SQS retries
     - _Requirements: 6.1, 6.2, 6.3, 11.2_
-  - [ ]* 4.2 Write property test: Workflow started with correct deal data
+  - [x]* 4.2 Write property test: Workflow started with correct deal data
     - **Property 7: Workflow started with correct deal data**
     - **Validates: Requirements 6.2**
-  - [ ]* 4.3 Write unit tests for WorkflowTriggerHandler
+  - [x]* 4.3 Write unit tests for WorkflowTriggerHandler
     - Test successful workflow start, StartExecution failure throws error, malformed SQS message handling
     - Mock Step Functions client using Mockito
     - _Requirements: 6.1, 6.2, 6.3, 17.1, 17.5_
@@ -72,13 +72,13 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 5.2 Create `CalendarService.java` under `service/src/main/java/com/flightdeal/service/`
     - Implement calendar lookup: compute date range from earliest departure to latest return across deals, call GoogleCalendarClient, transform response to `List<TimeWindow>`
     - _Requirements: 7.1, 7.3_
-  - [ ]* 5.3 Write property test: Calendar date range derived from deals
+  - [x]* 5.3 Write property test: Calendar date range derived from deals
     - **Property 8: Calendar date range derived from deals**
     - **Validates: Requirements 7.1**
-  - [ ]* 5.4 Write property test: Calendar response transformation
+  - [x]* 5.4 Write property test: Calendar response transformation
     - **Property 9: Calendar response transformation**
     - **Validates: Requirements 7.3**
-  - [ ]* 5.5 Write unit tests for CalendarService
+  - [x]* 5.5 Write unit tests for CalendarService
     - Test successful calendar lookup, date range calculation from deal list, API error handling
     - Mock GoogleCalendarClient using Mockito
     - _Requirements: 7.1, 7.2, 7.3, 17.1, 17.5_
@@ -87,13 +87,13 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 6.1 Create `FlightMatcher.java` under `service/src/main/java/com/flightdeal/service/`
     - Implement matching logic: for each deal, check if departure >= window start AND return <= window end; collect matches; sort by price ascending; return matched deals or empty list
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
-  - [ ]* 6.2 Write property test: Flight matching predicate correctness
+  - [x]* 6.2 Write property test: Flight matching predicate correctness
     - **Property 10: Flight matching predicate correctness**
     - **Validates: Requirements 8.1, 8.2**
-  - [ ]* 6.3 Write property test: Matched deals sorted by price ascending
+  - [x]* 6.3 Write property test: Matched deals sorted by price ascending
     - **Property 11: Matched deals sorted by price ascending**
     - **Validates: Requirements 8.3**
-  - [ ]* 6.4 Write unit tests for FlightMatcher
+  - [x]* 6.4 Write unit tests for FlightMatcher
     - Test deals within windows, deals outside windows, partial overlaps rejected, empty deals list, empty windows list, price sorting correctness
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 17.2_
 
@@ -101,19 +101,19 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 7.1 Create `NotificationService.java` under `service/src/main/java/com/flightdeal/service/`
     - Implement email notification: format email body with destination, price, departure date, return date, airline for each matched deal; send via Amazon SES to configured recipient
     - _Requirements: 9.1, 9.2_
-  - [ ]* 7.2 Write property test: Notification email contains all deal fields
+  - [x]* 7.2 Write property test: Notification email contains all deal fields
     - **Property 12: Notification email contains all deal fields**
     - **Validates: Requirements 9.1, 9.2**
-  - [ ]* 7.3 Write unit tests for NotificationService
+  - [x]* 7.3 Write unit tests for NotificationService
     - Test successful email send, email body formatting contains all fields, delivery failure handling
     - Mock SES client using Mockito
     - _Requirements: 9.1, 9.2, 9.3, 17.1, 17.5_
 
 - [x] 8. Implement MetricsEmitter and property test
-  - [ ]* 8.1 Write property test: Metrics emission accuracy
+  - [x]* 8.1 Write property test: Metrics emission accuracy
     - **Property 13: Metrics emission accuracy**
     - **Validates: Requirements 11.1, 11.2, 11.3**
-  - [ ]* 8.2 Write unit tests for MetricsEmitter
+  - [x]* 8.2 Write unit tests for MetricsEmitter
     - Test correct metric names, values, and dimensions emitted for each metric type
     - Mock CloudWatch client using Mockito
     - _Requirements: 11.1, 11.2, 11.3, 17.1, 17.5_

@@ -504,8 +504,11 @@ All components use SLF4J as the logging facade with Log4j2 as the backend, route
 
 DynamoDB access is abstracted behind a DAO interface to separate persistence logic from business logic:
 
-- `PriceRecordDao` (interface) — Defines `save(PriceRecord)` and query methods
-- `DynamoDbPriceRecordDao` (implementation) — Implements DAO using DynamoDB SDK with retry logic
+- `PriceRecordDao` (interface) — Defines `save(PriceRecordEntity)` and query methods
+- `DynamoDbPriceRecordDao` (implementation) — Implements DAO using DynamoDB Enhanced Client with retry logic
+- `PriceRecordEntity` — A `@DynamoDbBean` annotated POJO that maps directly to the DynamoDB table schema, with `@DynamoDbPartitionKey` on `destination` and `@DynamoDbSortKey` on `timestamp`
+
+The DynamoDB Enhanced Client is used instead of the low-level SDK to leverage `@DynamoDbBean` annotations for type-safe table mappings. This eliminates manual `AttributeValue` construction and makes the data layer cleaner.
 
 This makes handlers testable without mocking low-level DynamoDB SDK calls — tests mock the DAO interface instead.
 

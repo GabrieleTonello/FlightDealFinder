@@ -1,7 +1,5 @@
 package com.flightdeal.dao;
 
-import com.flightdeal.generated.model.FlightDeal;
-
 import java.util.List;
 
 /**
@@ -11,22 +9,18 @@ import java.util.List;
 public interface PriceRecordDao {
 
     /**
-     * Saves a single flight deal record to the Price Store.
-     * The implementation uses the deal's destination as the partition key
-     * and the retrieval timestamp as the sort key (ISO-8601).
+     * Saves a single price record entity to the Price Store.
      * Retry logic (up to 3 retries with exponential backoff) is handled by the implementation.
      *
-     * @param deal               the flight deal to persist
-     * @param retrievalTimestamp  the ISO-8601 timestamp of when the deal was retrieved
+     * @param entity the price record entity to persist
      */
-    void save(FlightDeal deal, String retrievalTimestamp);
+    void save(PriceRecordEntity entity);
 
     /**
-     * Saves a batch of flight deal records to the Price Store.
-     * Each deal is written individually with retry logic applied per write.
+     * Saves a batch of price record entities to the Price Store.
+     * Each entity is written individually with retry logic applied per write.
      *
-     * @param deals              the list of flight deals to persist
-     * @param retrievalTimestamp  the ISO-8601 timestamp of when the deals were retrieved
+     * @param entities the list of price record entities to persist
      */
-    void saveBatch(List<FlightDeal> deals, String retrievalTimestamp);
+    void saveBatch(List<PriceRecordEntity> entities);
 }

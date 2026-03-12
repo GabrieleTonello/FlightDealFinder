@@ -1,86 +1,68 @@
 package com.flightdeal.dao;
 
-import com.flightdeal.generated.model.FlightDeal;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import com.google.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
- * DynamoDB implementation of {@link PriceRecordDao}.
- * Writes flight deal records with destination as partition key and timestamp as sort key.
+ * DynamoDB Enhanced Client implementation of {@link PriceRecordDao}.
+ * Uses {@link PriceRecordEntity} bean mapping for type-safe table operations.
  * Includes retry logic: up to 3 retries with exponential backoff on write failures.
  */
+@Singleton
 public class DynamoDbPriceRecordDao implements PriceRecordDao {
 
-    private static final Logger LOG = Logger.getLogger(DynamoDbPriceRecordDao.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(DynamoDbPriceRecordDao.class);
     private static final int MAX_RETRIES = 3;
     private static final long BASE_DELAY_MS = 100;
 
-    private final DynamoDbClient dynamoDbClient;
-    private final String tableName;
+    private final DynamoDbTable<PriceRecordEntity> table;
 
     @Inject
-    public DynamoDbPriceRecordDao(DynamoDbClient dynamoDbClient,
-                                   @Named("priceStoreTableName") String tableName) {
-        this.dynamoDbClient = dynamoDbClient;
-        this.tableName = tableName;
+    public DynamoDbPriceRecordDao(DynamoDbEnhancedClient enhancedClient) {
+        this.table = enhancedClient.table("FlightPriceHistory",
+                TableSchema.fromBean(PriceRecordEntity.class));
     }
 
     @Override
-    public void save(FlightDeal deal, String retrievalTimestamp) {
-        Map<String, AttributeValue> item = new HashMap<>();
-        item.put("destination", AttributeValue.fromS(deal.getDestination()));
-        item.put("timestamp", AttributeValue.fromS(retrievalTimestamp));
-        item.put("price", AttributeValue.fromN(deal.getPrice().toPlainString()));
-        item.put("departureDate", AttributeValue.fromS(deal.getDepartureDate()));
-        item.put("returnDate", AttributeValue.fromS(deal.getReturnDate()));
-        item.put("airline", AttributeValue.fromS(deal.getAirline()));
-        item.put("retrievalTimestamp", AttributeValue.fromS(retrievalTimestamp));
-
-        PutItemRequest request = PutItemRequest.builder()
-                .tableName(tableName)
-                .item(item)
-                .build();
-
-        executeWithRetry(request, deal.getDestination());
+    public void save(PriceRecordEntity entity) {
+        executeWithRetry(entity);
     }
 
     @Override
-    public void saveBatch(List<FlightDeal> deals, String retrievalTimestamp) {
-        for (FlightDeal deal : deals) {
-            save(deal, retrievalTimestamp);
+    public void saveBatch(List<PriceRecordEntity> entities) {
+        for (PriceRecordEntity entity : entities) {
+            save(entity);
         }
     }
 
-    private void executeWithRetry(PutItemRequest request, String destination) {
+    private void executeWithRetry(PriceRecordEntity entity) {
         int attempt = 0;
         while (true) {
             try {
-                dynamoDbClient.putItem(request);
+                table.putItem(entity);
                 return;
             } catch (Exception e) {
                 attempt++;
                 if (attempt >= MAX_RETRIES) {
-                    LOG.log(Level.SEVERE, "DynamoDB write for " + destination
-                            + " failed after " + MAX_RETRIES + " attempts: " + e.getMessage(), e);
+                    LOG.error("DynamoDB write for {} failed after {} attempts: {}",
+                            entity.getDestination(), MAX_RETRIES, e.getMessage(), e);
                     return;
                 }
                 long delay = BASE_DELAY_MS * (1L << (attempt - 1));
-                LOG.log(Level.WARNING, "DynamoDB write for " + destination
-                        + " attempt " + attempt + " failed, retrying in " + delay + "ms: " + e.getMessage());
+                LOG.warn("DynamoDB write for {} attempt {} failed, retrying in {}ms: {}",
+                        entity.getDestination(), attempt, delay, e.getMessage());
                 try {
                     Thread.sleep(delay);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    LOG.log(Level.SEVERE, "DynamoDB write retry interrupted for " + destination, ie);
+                    LOG.error("DynamoDB write retry interrupted for {}", entity.getDestination(), ie);
                     return;
                 }
             }

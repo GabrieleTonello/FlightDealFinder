@@ -36,6 +36,7 @@ dependencies {
     // AWS SDK v2 service clients
     implementation 'software.amazon.awssdk:lambda'
     implementation 'software.amazon.awssdk:dynamodb'
+    implementation 'software.amazon.awssdk:dynamodb-enhanced'
     implementation 'software.amazon.awssdk:sns'
     implementation 'software.amazon.awssdk:sqs'
     implementation 'software.amazon.awssdk:sfn'

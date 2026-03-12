@@ -3,6 +3,8 @@ package com.flightdeal.proxy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flightdeal.generated.model.FlightDeal;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 import java.io.IOException;
 import java.math.BigDecimal;

@@ -46,6 +46,15 @@ dependencies {
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.3'
     implementation 'com.amazonaws:aws-lambda-java-events:3.14.0'
 
+    // Google Guice dependency injection
+    implementation 'com.google.inject:guice:7.0.0'
+
+    // SLF4J + Lambda Log4j2 for CloudWatch logging
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    implementation 'com.amazonaws:aws-lambda-java-log4j2:1.6.0'
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3'
+    implementation 'org.apache.logging.log4j:log4j-core:2.24.3'
+
     // Jackson JSON serialization
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
     implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"

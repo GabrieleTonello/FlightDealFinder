@@ -61,6 +61,8 @@ graph LR
 | IaC | CDK (TypeScript) | Type-safe, composable constructs, native AWS integration |
 | Data Contracts | Smithy IDL | Language-agnostic model definitions, Java code generation, compile-time type safety |
 | Email | Amazon SES | Managed email service, integrates natively with Lambda |
+| DI Framework | Google Guice | Lightweight, constructor-based DI for testability and clean wiring |
+| Data Access | DAO Pattern | Abstracts DynamoDB operations behind interfaces for testability and separation of concerns |
 | CI/CD | CodePipeline or GitHub Actions | Public, managed, supports multi-stage deployments |
 
 ## Components and Interfaces
@@ -478,6 +480,35 @@ operation SendNotification {
 | `airline` | String | — |
 | `retrievalTimestamp` | String | — |
 
+### Dependency Injection (Google Guice)
+
+All Lambda handlers and service components use Google Guice for dependency injection. Each Lambda handler has a corresponding Guice module that wires its dependencies. This enables:
+
+- Constructor injection for all components (handlers, services, DAOs, proxies)
+- Easy mocking in tests — inject mocks instead of real implementations
+- Clean separation of wiring logic from business logic
+
+**Guice Modules:**
+- `FlightSearchModule` — Binds FlightApiClient, PriceRecordDao, SNS client, MetricsEmitter for the Flight Search Lambda
+- `WorkflowTriggerModule` — Binds Step Functions client, MetricsEmitter for the Workflow Trigger Lambda
+- `CalendarModule` — Binds GoogleCalendarClient for the Calendar Service Lambda
+- `NotificationModule` — Binds SES client for the Notification Service Lambda
+
+Each Lambda handler's no-arg constructor creates the Guice injector and injects itself. The `@Inject`-annotated constructor is used by Guice (and by tests directly).
+
+### Logging
+
+All components use SLF4J as the logging facade with Log4j2 as the backend, routed to CloudWatch via `aws-lambda-java-log4j2`. A singleton `Logger` instance is obtained per class via `LoggerFactory.getLogger(ClassName.class)`. The logger is bound as a `@Singleton` in each Guice module so all components share a consistent logging configuration. A `log4j2.xml` configuration file under `src/main/resources/` configures the Lambda Log4j2 appender for structured CloudWatch output.
+
+### Data Access Object (DAO) Pattern
+
+DynamoDB access is abstracted behind a DAO interface to separate persistence logic from business logic:
+
+- `PriceRecordDao` (interface) — Defines `save(PriceRecord)` and query methods
+- `DynamoDbPriceRecordDao` (implementation) — Implements DAO using DynamoDB SDK with retry logic
+
+This makes handlers testable without mocking low-level DynamoDB SDK calls — tests mock the DAO interface instead.
+
 ### Project Structure
 
 ```
@@ -487,7 +518,7 @@ flight-deal-notifier/
 │       ├── model.smithy          # Data shapes
 │       └── services.smithy       # Service interfaces
 ├── service/
-│   ├── build.gradle              # Java 25, Smithy codegen, JUnit 5
+│   ├── build.gradle              # Java 25, Smithy codegen, JUnit 5, Guice
 │   └── src/
 │       ├── main/java/com/flightdeal/
 │       │   ├── handler/
@@ -500,6 +531,14 @@ flight-deal-notifier/
 │       │   ├── proxy/
 │       │   │   ├── FlightApiClient.java
 │       │   │   └── GoogleCalendarClient.java
+│       │   ├── dao/
+│       │   │   ├── PriceRecordDao.java
+│       │   │   └── DynamoDbPriceRecordDao.java
+│       │   ├── module/
+│       │   │   ├── FlightSearchModule.java
+│       │   │   ├── WorkflowTriggerModule.java
+│       │   │   ├── CalendarModule.java
+│       │   │   └── NotificationModule.java
 │       │   └── metrics/
 │       │       └── MetricsEmitter.java
 │       └── test/java/com/flightdeal/

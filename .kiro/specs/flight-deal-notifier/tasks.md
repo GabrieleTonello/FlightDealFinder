@@ -98,7 +98,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 17.2_
 
 - [ ] 7. Implement Notification Service
-  - [ ] 7.1 Create `NotificationService.java` under `service/src/main/java/com/flightdeal/service/`
+  - [x] 7.1 Create `NotificationService.java` under `service/src/main/java/com/flightdeal/service/`
     - Implement email notification: format email body with destination, price, departure date, return date, airline for each matched deal; send via Amazon SES to configured recipient
     - _Requirements: 9.1, 9.2_
   - [ ]* 7.2 Write property test: Notification email contains all deal fields

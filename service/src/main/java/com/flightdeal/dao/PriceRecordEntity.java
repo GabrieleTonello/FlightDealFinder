@@ -1,5 +1,9 @@
 package com.flightdeal.dao;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
@@ -11,6 +15,10 @@ import java.math.BigDecimal;
  * Maps directly to the table schema with destination as partition key
  * and timestamp as sort key.
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @DynamoDbBean
 public class PriceRecordEntity {
 
@@ -27,56 +35,8 @@ public class PriceRecordEntity {
         return destination;
     }
 
-    public void setDestination(String destination) {
-        this.destination = destination;
-    }
-
     @DynamoDbSortKey
     public String getTimestamp() {
         return timestamp;
-    }
-
-    public void setTimestamp(String timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-    public String getDepartureDate() {
-        return departureDate;
-    }
-
-    public void setDepartureDate(String departureDate) {
-        this.departureDate = departureDate;
-    }
-
-    public String getReturnDate() {
-        return returnDate;
-    }
-
-    public void setReturnDate(String returnDate) {
-        this.returnDate = returnDate;
-    }
-
-    public String getAirline() {
-        return airline;
-    }
-
-    public void setAirline(String airline) {
-        this.airline = airline;
-    }
-
-    public String getRetrievalTimestamp() {
-        return retrievalTimestamp;
-    }
-
-    public void setRetrievalTimestamp(String retrievalTimestamp) {
-        this.retrievalTimestamp = retrievalTimestamp;
     }
 }

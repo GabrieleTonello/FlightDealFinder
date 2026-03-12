@@ -24,7 +24,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 2.2 Create `MetricsEmitter.java` under `service/src/main/java/com/flightdeal/metrics/`
     - Implement CloudWatch custom metric emission for deals found, destinations searched, execution duration, workflows started, start failures, matches found, notifications sent
     - _Requirements: 11.1, 11.2, 11.3_
-  - [-] 2.3 Create `FlightSearchHandler.java` under `service/src/main/java/com/flightdeal/handler/`
+  - [x] 2.3 Create `FlightSearchHandler.java` under `service/src/main/java/com/flightdeal/handler/`
     - Implement Lambda handler: iterate configured destinations, call FlightApiClient per destination with error isolation, write deals to DynamoDB (retry 3x exponential backoff), publish deal batch to SNS (retry 3x exponential backoff), emit metrics
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 4.1, 4.2, 4.3, 11.1_
   - [ ]* 2.4 Write property test: All configured destinations are queried

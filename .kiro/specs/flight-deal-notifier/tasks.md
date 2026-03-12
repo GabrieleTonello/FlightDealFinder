@@ -17,7 +17,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Run Gradle build to confirm generated Java types compile and are available in `service/` source sets
     - _Requirements: 16.3, 16.4_
 
-- [ ] 2. Implement Flight Search Lambda handler and business logic
+- [x] 2. Implement Flight Search Lambda handler and business logic
   - [x] 2.1 Create `FlightApiClient.java` proxy under `service/src/main/java/com/flightdeal/proxy/`
     - Implement external flight API client with per-destination querying, returning `List<FlightDeal>` or throwing on error/timeout
     - _Requirements: 2.1, 2.2_
@@ -53,7 +53,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
 - [x] 3. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement Workflow Trigger Lambda handler
+- [x] 4. Implement Workflow Trigger Lambda handler
   - [x] 4.1 Create `WorkflowTriggerHandler.java` under `service/src/main/java/com/flightdeal/handler/`
     - Implement Lambda handler: parse DealBatchMessage from SQS event, start Step Functions execution with deal data as input, emit metrics (workflows started, start failures), throw on StartExecution failure so SQS retries
     - _Requirements: 6.1, 6.2, 6.3, 11.2_
@@ -65,7 +65,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Mock Step Functions client using Mockito
     - _Requirements: 6.1, 6.2, 6.3, 17.1, 17.5_
 
-- [ ] 5. Implement Calendar Service
+- [x] 5. Implement Calendar Service
   - [x] 5.1 Create `GoogleCalendarClient.java` proxy under `service/src/main/java/com/flightdeal/proxy/`
     - Implement Google Calendar API client: authenticate via OAuth2 credentials from SSM/Secrets Manager, retrieve free/busy windows for a date range
     - _Requirements: 7.1_
@@ -83,7 +83,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Mock GoogleCalendarClient using Mockito
     - _Requirements: 7.1, 7.2, 7.3, 17.1, 17.5_
 
-- [ ] 6. Implement Flight Matcher
+- [x] 6. Implement Flight Matcher
   - [x] 6.1 Create `FlightMatcher.java` under `service/src/main/java/com/flightdeal/service/`
     - Implement matching logic: for each deal, check if departure >= window start AND return <= window end; collect matches; sort by price ascending; return matched deals or empty list
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
@@ -97,7 +97,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Test deals within windows, deals outside windows, partial overlaps rejected, empty deals list, empty windows list, price sorting correctness
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 17.2_
 
-- [ ] 7. Implement Notification Service
+- [x] 7. Implement Notification Service
   - [x] 7.1 Create `NotificationService.java` under `service/src/main/java/com/flightdeal/service/`
     - Implement email notification: format email body with destination, price, departure date, return date, airline for each matched deal; send via Amazon SES to configured recipient
     - _Requirements: 9.1, 9.2_
@@ -109,7 +109,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Mock SES client using Mockito
     - _Requirements: 9.1, 9.2, 9.3, 17.1, 17.5_
 
-- [ ] 8. Implement MetricsEmitter and property test
+- [x] 8. Implement MetricsEmitter and property test
   - [ ]* 8.1 Write property test: Metrics emission accuracy
     - **Property 13: Metrics emission accuracy**
     - **Validates: Requirements 11.1, 11.2, 11.3**
@@ -121,7 +121,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
 - [x] 9. Checkpoint - Ensure all service code tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Initialize CDK project and create infrastructure constructs
+- [x] 10. Initialize CDK project and create infrastructure constructs
   - [x] 10.1 Initialize CDK TypeScript project under `infra/` with `package.json`, `tsconfig.json`, and CDK app entry point `bin/app.ts`
     - Install `aws-cdk-lib`, `constructs`, and dev dependencies for CDK assertion tests
     - _Requirements: 13.1, 20.2, 20.7_
@@ -144,13 +144,13 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Define CloudWatch dashboard (Lambda invocations, error rates, DynamoDB capacity, SQS message age/count, DLQ count) and alarms (DLQ > 0, Lambda error rate > 10%, workflow failures > 0, queue age > 2h) with SNS alerting
     - _Requirements: 11.4, 12.1, 12.2, 12.3, 12.4, 12.5, 14.3_
 
-- [ ] 11. Create CI/CD pipeline construct
+- [x] 11. Create CI/CD pipeline construct
   - [x] 11.1 Create `pipeline-construct.ts` under `infra/lib/`
     - Define Build_Pipeline with: build phase (Gradle compile + unit tests + CDK synth), Dev_Stage deployment, integration test execution against Dev_Stage, Prod_Stage deployment gated on integration test success
     - Parameterize environment-specific values per stage using CDK context or SSM parameters
     - _Requirements: 13.2, 13.3, 13.4, 17.3, 17.4, 18.4, 18.5, 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 20.5, 20.8, 20.9_
 
-- [ ] 12. Wire CDK app entry point and stack composition
+- [x] 12. Wire CDK app entry point and stack composition
   - [x] 12.1 Update `bin/app.ts` to compose all constructs into a single CDK stack
     - Import and instantiate all constructs (scheduling, data-store, messaging, compute, workflow, observability, pipeline), wire cross-construct references (Lambda ARNs, queue URLs, topic ARNs, state machine ARN)
     - _Requirements: 13.1, 13.2, 15.1_
@@ -161,7 +161,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
 - [x] 13. Checkpoint - Ensure CDK synth and all tests pass
   - Ensure all tests pass, CDK synthesizes successfully, ask the user if questions arise.
 
-- [ ] 14. Achieve 90% unit test coverage (branch and line) for all service code
+- [x] 14. Achieve 90% unit test coverage (branch and line) for all service code
   - [x] 14.1 Add JaCoCo Gradle plugin to `service/build.gradle` with 90% minimum coverage enforcement
     - Configure `jacoco` plugin, `jacocoTestReport` (HTML + XML), and `jacocoTestCoverageVerification` with 0.9 minimum for both `BRANCH` and `LINE` counters. Wire `check` task to depend on verification. Exclude Guice modules and Lombok-generated code from coverage.
     - _Requirements: 17.1, 17.3, 17.4_
@@ -193,7 +193,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Ensure the build passes with JaCoCo enforcement. If coverage is below 90%, identify uncovered branches and add targeted tests until the threshold is met.
     - _Requirements: 17.1, 17.3, 17.4_
 
-- [ ] 15. Create integration tests
+- [x] 15. Create integration tests
   - [x] 15.1 Create `SchedulerIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
     - Validate that the Scheduler triggers the Flight_Search_Lambda and deal records appear in the Price_Store
     - _Requirements: 18.1_
@@ -204,7 +204,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Validate that the Workflow_Trigger_Lambda starts the Matching_Workflow when a message is consumed from the Deal_Queue
     - _Requirements: 18.3_
 
-- [ ] 16. Final checkpoint - Ensure all tests pass
+- [x] 16. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

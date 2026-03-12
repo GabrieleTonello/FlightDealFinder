@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
+import { FlightDealNotifierStack } from '../lib/stacks/flight-deal-notifier-stack';
 
 const app = new cdk.App();
 
-// Placeholder — constructs will be composed into a stack in Task 12.1
-new cdk.Stack(app, 'FlightDealNotifierStack', {
+new FlightDealNotifierStack(app, 'FlightDealNotifierStack', {
   description: 'Flight Deal Notifier infrastructure stack',
 });

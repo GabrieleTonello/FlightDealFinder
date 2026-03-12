@@ -50,11 +50,11 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Mock FlightApiClient, DynamoDB client, SNS client using Mockito
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.3, 4.1, 4.3, 17.1, 17.5_
 
-- [ ] 3. Checkpoint - Ensure all tests pass
+- [x] 3. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Implement Workflow Trigger Lambda handler
-  - [ ] 4.1 Create `WorkflowTriggerHandler.java` under `service/src/main/java/com/flightdeal/handler/`
+  - [x] 4.1 Create `WorkflowTriggerHandler.java` under `service/src/main/java/com/flightdeal/handler/`
     - Implement Lambda handler: parse DealBatchMessage from SQS event, start Step Functions execution with deal data as input, emit metrics (workflows started, start failures), throw on StartExecution failure so SQS retries
     - _Requirements: 6.1, 6.2, 6.3, 11.2_
   - [ ]* 4.2 Write property test: Workflow started with correct deal data

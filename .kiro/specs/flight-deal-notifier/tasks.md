@@ -118,11 +118,11 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Mock CloudWatch client using Mockito
     - _Requirements: 11.1, 11.2, 11.3, 17.1, 17.5_
 
-- [ ] 9. Checkpoint - Ensure all service code tests pass
+- [x] 9. Checkpoint - Ensure all service code tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Initialize CDK project and create infrastructure constructs
-  - [ ] 10.1 Initialize CDK TypeScript project under `infra/` with `package.json`, `tsconfig.json`, and CDK app entry point `bin/app.ts`
+  - [x] 10.1 Initialize CDK TypeScript project under `infra/` with `package.json`, `tsconfig.json`, and CDK app entry point `bin/app.ts`
     - Install `aws-cdk-lib`, `constructs`, and dev dependencies for CDK assertion tests
     - _Requirements: 13.1, 20.2, 20.7_
   - [ ] 10.2 Create `scheduling-construct.ts` under `infra/lib/`

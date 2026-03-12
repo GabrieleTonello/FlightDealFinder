@@ -137,7 +137,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 10.5 Create `compute-construct.ts` under `infra/lib/`
     - Define Flight Search Lambda and Workflow Trigger Lambda with Java 25 runtime, reserved concurrency, memory, timeout settings, IAM roles with least-privilege permissions (DynamoDB write, SNS publish, SQS consume, Step Functions start execution)
     - _Requirements: 14.1, 14.4, 15.1, 15.2, 15.3, 20.1_
-  - [ ] 10.6 Create `workflow-construct.ts` under `infra/lib/`
+  - [x] 10.6 Create `workflow-construct.ts` under `infra/lib/`
     - Define Step Functions Standard Workflow with CalendarLookup, FlightMatching, SendNotification states, retry policies with exponential backoff per step, failure state handler that logs error details and publishes failure event
     - _Requirements: 10.1, 10.2, 10.3_
   - [ ] 10.7 Create `observability-construct.ts` under `infra/lib/`

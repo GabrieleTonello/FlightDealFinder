@@ -125,7 +125,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 10.1 Initialize CDK TypeScript project under `infra/` with `package.json`, `tsconfig.json`, and CDK app entry point `bin/app.ts`
     - Install `aws-cdk-lib`, `constructs`, and dev dependencies for CDK assertion tests
     - _Requirements: 13.1, 20.2, 20.7_
-  - [ ] 10.2 Create `scheduling-construct.ts` under `infra/lib/`
+  - [x] 10.2 Create `scheduling-construct.ts` under `infra/lib/`
     - Define EventBridge rule with `rate(1 hour)` schedule targeting Flight Search Lambda, with retry policy (2 retries)
     - _Requirements: 1.1, 1.2, 1.3_
   - [ ] 10.3 Create `data-store-construct.ts` under `infra/lib/`

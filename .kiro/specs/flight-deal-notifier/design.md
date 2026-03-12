@@ -232,13 +232,17 @@ infra/
 ├── bin/
 │   └── app.ts                    # CDK app entry point
 ├── lib/
-│   ├── scheduling-construct.ts   # EventBridge rule
-│   ├── data-store-construct.ts   # DynamoDB table
-│   ├── messaging-construct.ts    # SNS topic, SQS queues, DLQ
-│   ├── compute-construct.ts      # Lambda functions
-│   ├── workflow-construct.ts     # Step Functions state machine
-│   ├── observability-construct.ts# CloudWatch dashboard & alarms
-│   └── pipeline-construct.ts     # CI/CD pipeline stages
+│   ├── stacks/
+│   │   └── flight-deal-notifier-stack.ts  # Main stack composing all constructs
+│   ├── constructs/
+│   │   ├── scheduling-construct.ts   # EventBridge rule
+│   │   ├── data-store-construct.ts   # DynamoDB table
+│   │   ├── messaging-construct.ts    # SNS topic, SQS queues, DLQ
+│   │   ├── compute-construct.ts      # Lambda functions
+│   │   ├── workflow-construct.ts     # Step Functions state machine
+│   │   ├── observability-construct.ts# CloudWatch dashboard & alarms
+│   │   └── pipeline-construct.ts     # CI/CD pipeline stages
+│   └── util/                         # Shared utilities
 ├── package.json
 └── tsconfig.json
 ```

@@ -128,7 +128,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 10.2 Create `scheduling-construct.ts` under `infra/lib/`
     - Define EventBridge rule with `rate(1 hour)` schedule targeting Flight Search Lambda, with retry policy (2 retries)
     - _Requirements: 1.1, 1.2, 1.3_
-  - [ ] 10.3 Create `data-store-construct.ts` under `infra/lib/`
+  - [-] 10.3 Create `data-store-construct.ts` under `infra/lib/`
     - Define DynamoDB table `FlightPriceHistory` with partition key `destination` (String) and sort key `timestamp` (String), on-demand billing
     - _Requirements: 3.1, 3.2_
   - [ ] 10.4 Create `messaging-construct.ts` under `infra/lib/`

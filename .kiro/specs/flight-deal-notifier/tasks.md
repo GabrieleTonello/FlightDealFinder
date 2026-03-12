@@ -158,11 +158,11 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Validate EventBridge schedule rate and retry policy, SQS visibility timeout and redrive policy, DLQ retention, Lambda concurrency/memory/timeout, CloudWatch alarm thresholds and actions, IAM least-privilege policies, Step Functions retry policies
     - _Requirements: 1.1, 1.3, 5.2, 5.3, 5.4, 10.1, 12.1, 12.2, 12.3, 12.5, 14.1, 14.4, 15.3_
 
-- [ ] 13. Checkpoint - Ensure CDK synth and all tests pass
+- [x] 13. Checkpoint - Ensure CDK synth and all tests pass
   - Ensure all tests pass, CDK synthesizes successfully, ask the user if questions arise.
 
 - [ ] 14. Achieve 90% unit test coverage (branch and line) for all service code
-  - [ ] 14.1 Add JaCoCo Gradle plugin to `service/build.gradle` with 90% minimum coverage enforcement
+  - [x] 14.1 Add JaCoCo Gradle plugin to `service/build.gradle` with 90% minimum coverage enforcement
     - Configure `jacoco` plugin, `jacocoTestReport` (HTML + XML), and `jacocoTestCoverageVerification` with 0.9 minimum for both `BRANCH` and `LINE` counters. Wire `check` task to depend on verification. Exclude Guice modules and Lombok-generated code from coverage.
     - _Requirements: 17.1, 17.3, 17.4_
   - [ ] 14.2 Create `FlightSearchHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`

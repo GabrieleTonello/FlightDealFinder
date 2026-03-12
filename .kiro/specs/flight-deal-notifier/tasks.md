@@ -140,7 +140,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 10.6 Create `workflow-construct.ts` under `infra/lib/`
     - Define Step Functions Standard Workflow with CalendarLookup, FlightMatching, SendNotification states, retry policies with exponential backoff per step, failure state handler that logs error details and publishes failure event
     - _Requirements: 10.1, 10.2, 10.3_
-  - [ ] 10.7 Create `observability-construct.ts` under `infra/lib/`
+  - [x] 10.7 Create `observability-construct.ts` under `infra/lib/`
     - Define CloudWatch dashboard (Lambda invocations, error rates, DynamoDB capacity, SQS message age/count, DLQ count) and alarms (DLQ > 0, Lambda error rate > 10%, workflow failures > 0, queue age > 2h) with SNS alerting
     - _Requirements: 11.4, 12.1, 12.2, 12.3, 12.4, 12.5, 14.3_
 

@@ -145,7 +145,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - _Requirements: 11.4, 12.1, 12.2, 12.3, 12.4, 12.5, 14.3_
 
 - [ ] 11. Create CI/CD pipeline construct
-  - [ ] 11.1 Create `pipeline-construct.ts` under `infra/lib/`
+  - [x] 11.1 Create `pipeline-construct.ts` under `infra/lib/`
     - Define Build_Pipeline with: build phase (Gradle compile + unit tests + CDK synth), Dev_Stage deployment, integration test execution against Dev_Stage, Prod_Stage deployment gated on integration test success
     - Parameterize environment-specific values per stage using CDK context or SSM parameters
     - _Requirements: 13.2, 13.3, 13.4, 17.3, 17.4, 18.4, 18.5, 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 20.5, 20.8, 20.9_
@@ -161,18 +161,50 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
 - [ ] 13. Checkpoint - Ensure CDK synth and all tests pass
   - Ensure all tests pass, CDK synthesizes successfully, ask the user if questions arise.
 
-- [ ] 14. Create integration tests
-  - [ ] 14.1 Create `SchedulerIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
+- [ ] 14. Achieve 90% unit test coverage (branch and line) for all service code
+  - [ ] 14.1 Add JaCoCo Gradle plugin to `service/build.gradle` with 90% minimum coverage enforcement
+    - Configure `jacoco` plugin, `jacocoTestReport` (HTML + XML), and `jacocoTestCoverageVerification` with 0.9 minimum for both `BRANCH` and `LINE` counters. Wire `check` task to depend on verification. Exclude Guice modules and Lombok-generated code from coverage.
+    - _Requirements: 17.1, 17.3, 17.4_
+  - [ ] 14.2 Create `FlightSearchHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`
+    - Test with Mockito mocks for FlightApiClient, PriceRecordDao, SnsClient, MetricsEmitter. Cover: success path (deals found for all destinations), partial failures (some destinations throw FlightApiException), all destinations fail, empty results from API, DynamoDB saveBatch called with correct entities, SNS publish with retry on failure, SNS publish serialization failure, metrics emission, empty destinations list.
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.3, 4.1, 4.3, 17.1, 17.5_
+  - [ ] 14.3 Create `WorkflowTriggerHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`
+    - Test with Mockito mocks for SfnClient, MetricsEmitter, ObjectMapper. Cover: successful workflow start (verify startExecution called with correct ARN and input), StartExecution failure throws RuntimeException, multiple SQS records processed, metrics emitted on success and failure.
+    - _Requirements: 6.1, 6.2, 6.3, 17.1, 17.5_
+  - [ ] 14.4 Create `CalendarServiceTest.java` under `service/src/test/java/com/flightdeal/service/`
+    - Test with Mockito mock for GoogleCalendarClient. Cover: successful lookup returns free windows, date range computed from earliest departure to latest return, null/empty deals list returns empty, CalendarApiException wrapped as RuntimeException.
+    - _Requirements: 7.1, 7.2, 7.3, 17.1, 17.5_
+  - [ ] 14.5 Create `FlightMatcherTest.java` under `service/src/test/java/com/flightdeal/service/`
+    - Test without mocks (pure logic). Cover: deal entirely within window matches, deal partially overlapping rejected, deal outside window rejected, multiple windows with matches, matched deals sorted by price ascending, null/empty deals returns empty, null/empty windows returns empty, single deal single window exact boundary match.
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 17.2_
+  - [ ] 14.6 Create `NotificationServiceTest.java` under `service/src/test/java/com/flightdeal/service/`
+    - Test with Mockito mock for SesClient. Cover: successful email send returns messageId, email body contains all deal fields (destination, price, departure, return, airline), multiple deals formatted correctly, SES throws exception wrapped as RuntimeException, subject line singular/plural deal count.
+    - _Requirements: 9.1, 9.2, 9.3, 17.1, 17.5_
+  - [ ] 14.7 Create `MetricsEmitterTest.java` under `service/src/test/java/com/flightdeal/metrics/`
+    - Test with Mockito mock for CloudWatchClient. Cover: each emit method (emitDealsFound, emitDestinationsSearched, emitExecutionDuration, emitWorkflowsStarted, emitStartFailures, emitMatchesFound, emitNotificationsSent) calls putMetricData with correct namespace, metric name, value, and unit.
+    - _Requirements: 11.1, 11.2, 11.3, 17.1, 17.5_
+  - [ ] 14.8 Create `GoogleCalendarClientTest.java` under `service/src/test/java/com/flightdeal/proxy/`
+    - Test with Mockito mock for HttpClient. Cover: successful response with busy periods returns computed free windows, empty busy periods returns full range as free, non-200 status throws CalendarApiException with HTTP_ERROR, timeout throws CalendarApiException with TIMEOUT, IOException throws CalendarApiException with IO_ERROR, malformed JSON throws CalendarApiException with PARSE_ERROR, no calendar data for calendarId returns full range.
+    - _Requirements: 7.1, 17.1, 17.5_
+  - [ ] 14.9 Create `DynamoDbPriceRecordDaoTest.java` under `service/src/test/java/com/flightdeal/dao/`
+    - Test with Mockito mock for DynamoDbEnhancedClient and DynamoDbTable. Cover: save calls putItem, save retries on first failure then succeeds, save fails after 3 retries and logs error, saveBatch calls save for each entity, InterruptedException during retry sleep exits gracefully.
+    - _Requirements: 3.1, 3.3, 17.1, 17.5_
+  - [ ] 14.10 Run `gradle test jacocoTestReport jacocoTestCoverageVerification` and verify 90% branch and line coverage
+    - Ensure the build passes with JaCoCo enforcement. If coverage is below 90%, identify uncovered branches and add targeted tests until the threshold is met.
+    - _Requirements: 17.1, 17.3, 17.4_
+
+- [ ] 15. Create integration tests
+  - [ ] 15.1 Create `SchedulerIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
     - Validate that the Scheduler triggers the Flight_Search_Lambda and deal records appear in the Price_Store
     - _Requirements: 18.1_
-  - [ ] 14.2 Create `MessagingIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
+  - [ ] 15.2 Create `MessagingIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
     - Validate that messages published to the Deal_Topic are received by the Deal_Queue
     - _Requirements: 18.2_
-  - [ ] 14.3 Create `WorkflowIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
+  - [ ] 15.3 Create `WorkflowIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
     - Validate that the Workflow_Trigger_Lambda starts the Matching_Workflow when a message is consumed from the Deal_Queue
     - _Requirements: 18.3_
 
-- [ ] 15. Final checkpoint - Ensure all tests pass
+- [ ] 16. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

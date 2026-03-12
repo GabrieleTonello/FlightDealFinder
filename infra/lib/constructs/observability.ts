@@ -7,19 +7,14 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import { ALARM_THRESHOLDS, ALARM_NAMES, ALERTING, DASHBOARD } from '../configuration/constants';
 
 export interface ObservabilityConstructProps {
-  /** Flight Search Lambda function */
   readonly flightSearchLambda: lambda.IFunction;
-  /** Workflow Trigger Lambda function */
   readonly workflowTriggerLambda: lambda.IFunction;
-  /** SQS Deal Queue */
   readonly dealQueue: sqs.IQueue;
-  /** SQS Dead Letter Queue */
   readonly deadLetterQueue: sqs.IQueue;
-  /** DynamoDB Price Store table */
   readonly table: dynamodb.ITable;
-  /** Step Functions Matching Workflow state machine */
   readonly stateMachine: sfn.IStateMachine;
 }
 
@@ -30,98 +25,72 @@ export class ObservabilityConstruct extends Construct {
   constructor(scope: Construct, id: string, props: ObservabilityConstructProps) {
     super(scope, id);
 
-    // --- Alerting SNS Topic (Req 12.4) ---
     this.alertingTopic = new sns.Topic(this, 'AlertingTopic', {
-      topicName: 'FlightDealAlertingTopic',
+      topicName: ALERTING.topicName,
     });
 
     const alarmAction = new cloudwatchActions.SnsAction(this.alertingTopic);
 
-    // =====================
-    // Alarms
-    // =====================
-
-    // Alarm 1: DLQ message count > 0 (Req 12.1, 14.3)
     const dlqAlarm = new cloudwatch.Alarm(this, 'DlqMessageCountAlarm', {
-      alarmName: 'FlightDeal-DLQ-NonEmpty',
+      alarmName: ALARM_NAMES.dlqNonEmpty,
       alarmDescription: 'Dead Letter Queue has messages — indicates processing failures',
       metric: props.deadLetterQueue.metricApproximateNumberOfMessagesVisible({
         period: Duration.minutes(1),
         statistic: 'Maximum',
       }),
-      threshold: 0,
+      threshold: ALARM_THRESHOLDS.dlqMessageCount,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       evaluationPeriods: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     dlqAlarm.addAlarmAction(alarmAction);
 
-    // Alarm 2: Flight Search Lambda error rate > 10% over 1 hour (Req 12.2)
     const flightSearchErrorRate = new cloudwatch.MathExpression({
       expression: '(errors / invocations) * 100',
       usingMetrics: {
-        errors: props.flightSearchLambda.metricErrors({
-          period: Duration.hours(1),
-          statistic: 'Sum',
-        }),
-        invocations: props.flightSearchLambda.metricInvocations({
-          period: Duration.hours(1),
-          statistic: 'Sum',
-        }),
+        errors: props.flightSearchLambda.metricErrors({ period: Duration.hours(1), statistic: 'Sum' }),
+        invocations: props.flightSearchLambda.metricInvocations({ period: Duration.hours(1), statistic: 'Sum' }),
       },
       period: Duration.hours(1),
     });
 
     const flightSearchErrorAlarm = new cloudwatch.Alarm(this, 'FlightSearchErrorRateAlarm', {
-      alarmName: 'FlightDeal-FlightSearch-ErrorRate',
-      alarmDescription: 'Flight Search Lambda error rate exceeds 10% over 1 hour',
+      alarmName: ALARM_NAMES.flightSearchErrorRate,
+      alarmDescription: 'Flight Search Lambda error rate exceeds threshold over 1 hour',
       metric: flightSearchErrorRate,
-      threshold: 10,
+      threshold: ALARM_THRESHOLDS.lambdaErrorRatePercent,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       evaluationPeriods: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     flightSearchErrorAlarm.addAlarmAction(alarmAction);
 
-    // Alarm 3: Matching Workflow failure count > 0 in 1 hour (Req 12.3)
     const workflowFailureAlarm = new cloudwatch.Alarm(this, 'WorkflowFailureAlarm', {
-      alarmName: 'FlightDeal-Workflow-Failures',
+      alarmName: ALARM_NAMES.workflowFailures,
       alarmDescription: 'Matching Workflow has failures in the last hour',
-      metric: props.stateMachine.metricFailed({
-        period: Duration.hours(1),
-        statistic: 'Sum',
-      }),
-      threshold: 0,
+      metric: props.stateMachine.metricFailed({ period: Duration.hours(1), statistic: 'Sum' }),
+      threshold: ALARM_THRESHOLDS.workflowFailureCount,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       evaluationPeriods: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     workflowFailureAlarm.addAlarmAction(alarmAction);
 
-    // Alarm 4: Deal Queue message age > 2 hours (Req 12.5)
     const queueAgeAlarm = new cloudwatch.Alarm(this, 'DealQueueAgeAlarm', {
-      alarmName: 'FlightDeal-DealQueue-MessageAge',
-      alarmDescription: 'Deal Queue oldest message age exceeds 2 hours',
-      metric: props.dealQueue.metricApproximateAgeOfOldestMessage({
-        period: Duration.minutes(5),
-        statistic: 'Maximum',
-      }),
-      threshold: Duration.hours(2).toSeconds(),
+      alarmName: ALARM_NAMES.dealQueueAge,
+      alarmDescription: 'Deal Queue oldest message age exceeds threshold',
+      metric: props.dealQueue.metricApproximateAgeOfOldestMessage({ period: Duration.minutes(5), statistic: 'Maximum' }),
+      threshold: ALARM_THRESHOLDS.queueAgeSeconds,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       evaluationPeriods: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     queueAgeAlarm.addAlarmAction(alarmAction);
 
-    // =====================
-    // Dashboard (Req 11.4)
-    // =====================
-
     this.dashboard = new cloudwatch.Dashboard(this, 'FlightDealDashboard', {
-      dashboardName: 'FlightDealNotifier',
+      dashboardName: DASHBOARD.name,
     });
 
-    // Row 1: Lambda invocation counts and error rates
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'Lambda Invocations',
@@ -141,7 +110,6 @@ export class ObservabilityConstruct extends Construct {
       }),
     );
 
-    // Row 2: DynamoDB read/write capacity usage
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'DynamoDB Read Capacity',
@@ -155,7 +123,6 @@ export class ObservabilityConstruct extends Construct {
       }),
     );
 
-    // Row 3: SQS message age and approximate message count
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'SQS Message Age',
@@ -169,13 +136,10 @@ export class ObservabilityConstruct extends Construct {
       }),
     );
 
-    // Row 4: Dead Letter Queue message count
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'Dead Letter Queue Message Count',
-        left: [
-          props.deadLetterQueue.metricApproximateNumberOfMessagesVisible({ statistic: 'Maximum' }),
-        ],
+        left: [props.deadLetterQueue.metricApproximateNumberOfMessagesVisible({ statistic: 'Maximum' })],
         width: 12,
       }),
       new cloudwatch.AlarmStatusWidget({

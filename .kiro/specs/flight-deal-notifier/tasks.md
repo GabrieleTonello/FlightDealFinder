@@ -151,7 +151,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - _Requirements: 13.2, 13.3, 13.4, 17.3, 17.4, 18.4, 18.5, 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 20.5, 20.8, 20.9_
 
 - [ ] 12. Wire CDK app entry point and stack composition
-  - [ ] 12.1 Update `bin/app.ts` to compose all constructs into a single CDK stack
+  - [x] 12.1 Update `bin/app.ts` to compose all constructs into a single CDK stack
     - Import and instantiate all constructs (scheduling, data-store, messaging, compute, workflow, observability, pipeline), wire cross-construct references (Lambda ARNs, queue URLs, topic ARNs, state machine ARN)
     - _Requirements: 13.1, 13.2, 15.1_
   - [ ]* 12.2 Write CDK assertion tests

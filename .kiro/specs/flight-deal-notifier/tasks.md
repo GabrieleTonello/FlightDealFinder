@@ -174,7 +174,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 14.4 Create `CalendarServiceTest.java` under `service/src/test/java/com/flightdeal/service/`
     - Test with Mockito mock for GoogleCalendarClient. Cover: successful lookup returns free windows, date range computed from earliest departure to latest return, null/empty deals list returns empty, CalendarApiException wrapped as RuntimeException.
     - _Requirements: 7.1, 7.2, 7.3, 17.1, 17.5_
-  - [ ] 14.5 Create `FlightMatcherTest.java` under `service/src/test/java/com/flightdeal/service/`
+  - [x] 14.5 Create `FlightMatcherTest.java` under `service/src/test/java/com/flightdeal/service/`
     - Test without mocks (pure logic). Cover: deal entirely within window matches, deal partially overlapping rejected, deal outside window rejected, multiple windows with matches, matched deals sorted by price ascending, null/empty deals returns empty, null/empty windows returns empty, single deal single window exact boundary match.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 17.2_
   - [ ] 14.6 Create `NotificationServiceTest.java` under `service/src/test/java/com/flightdeal/service/`

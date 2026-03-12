@@ -1,0 +1,60 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.flightdeal'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+def awsSdkVersion = '2.31.1'
+
+dependencies {
+    // AWS SDK v2 BOM
+    implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
+
+    // AWS SDK v2 service clients for integration testing
+    implementation 'software.amazon.awssdk:lambda'
+    implementation 'software.amazon.awssdk:dynamodb'
+    implementation 'software.amazon.awssdk:sns'
+    implementation 'software.amazon.awssdk:sqs'
+    implementation 'software.amazon.awssdk:sfn'
+    implementation 'software.amazon.awssdk:cloudwatchevents'
+
+    // Jackson for JSON serialization
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.3'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.3'
+
+    // SLF4J + simple logger for test output
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    implementation 'org.slf4j:slf4j-simple:2.0.16'
+
+    // JUnit 5
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+
+    // Pass environment variables through to tests
+    systemProperty 'FLIGHT_SEARCH_LAMBDA_NAME', System.getenv('FLIGHT_SEARCH_LAMBDA_NAME') ?: ''
+    systemProperty 'TABLE_NAME', System.getenv('TABLE_NAME') ?: ''
+    systemProperty 'TOPIC_ARN', System.getenv('TOPIC_ARN') ?: ''
+    systemProperty 'QUEUE_URL', System.getenv('QUEUE_URL') ?: ''
+    systemProperty 'STATE_MACHINE_ARN', System.getenv('STATE_MACHINE_ARN') ?: ''
+    systemProperty 'WORKFLOW_TRIGGER_LAMBDA_NAME', System.getenv('WORKFLOW_TRIGGER_LAMBDA_NAME') ?: ''
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}

@@ -194,13 +194,13 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - _Requirements: 17.1, 17.3, 17.4_
 
 - [ ] 15. Create integration tests
-  - [ ] 15.1 Create `SchedulerIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
+  - [x] 15.1 Create `SchedulerIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
     - Validate that the Scheduler triggers the Flight_Search_Lambda and deal records appear in the Price_Store
     - _Requirements: 18.1_
-  - [ ] 15.2 Create `MessagingIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
+  - [x] 15.2 Create `MessagingIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
     - Validate that messages published to the Deal_Topic are received by the Deal_Queue
     - _Requirements: 18.2_
-  - [ ] 15.3 Create `WorkflowIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
+  - [x] 15.3 Create `WorkflowIntegrationTest.java` under `integration-tests/src/test/java/com/flightdeal/`
     - Validate that the Workflow_Trigger_Lambda starts the Matching_Workflow when a message is consumed from the Deal_Queue
     - _Requirements: 18.3_
 

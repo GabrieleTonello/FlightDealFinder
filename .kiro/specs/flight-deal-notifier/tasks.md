@@ -69,7 +69,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 5.1 Create `GoogleCalendarClient.java` proxy under `service/src/main/java/com/flightdeal/proxy/`
     - Implement Google Calendar API client: authenticate via OAuth2 credentials from SSM/Secrets Manager, retrieve free/busy windows for a date range
     - _Requirements: 7.1_
-  - [ ] 5.2 Create `CalendarService.java` under `service/src/main/java/com/flightdeal/service/`
+  - [x] 5.2 Create `CalendarService.java` under `service/src/main/java/com/flightdeal/service/`
     - Implement calendar lookup: compute date range from earliest departure to latest return across deals, call GoogleCalendarClient, transform response to `List<TimeWindow>`
     - _Requirements: 7.1, 7.3_
   - [ ]* 5.3 Write property test: Calendar date range derived from deals

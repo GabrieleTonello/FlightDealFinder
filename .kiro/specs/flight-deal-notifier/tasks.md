@@ -18,10 +18,10 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - _Requirements: 16.3, 16.4_
 
 - [ ] 2. Implement Flight Search Lambda handler and business logic
-  - [-] 2.1 Create `FlightApiClient.java` proxy under `service/src/main/java/com/flightdeal/proxy/`
+  - [x] 2.1 Create `FlightApiClient.java` proxy under `service/src/main/java/com/flightdeal/proxy/`
     - Implement external flight API client with per-destination querying, returning `List<FlightDeal>` or throwing on error/timeout
     - _Requirements: 2.1, 2.2_
-  - [~] 2.2 Create `MetricsEmitter.java` under `service/src/main/java/com/flightdeal/metrics/`
+  - [x] 2.2 Create `MetricsEmitter.java` under `service/src/main/java/com/flightdeal/metrics/`
     - Implement CloudWatch custom metric emission for deals found, destinations searched, execution duration, workflows started, start failures, matches found, notifications sent
     - _Requirements: 11.1, 11.2, 11.3_
   - [~] 2.3 Create `FlightSearchHandler.java` under `service/src/main/java/com/flightdeal/handler/`

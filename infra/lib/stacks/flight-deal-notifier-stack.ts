@@ -2,12 +2,12 @@ import { Stack, StackProps, Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { DataStoreConstruct } from '../constructs/data-store-construct';
-import { MessagingConstruct } from '../constructs/messaging-construct';
-import { ComputeConstruct } from '../constructs/compute-construct';
-import { SchedulingConstruct } from '../constructs/scheduling-construct';
-import { WorkflowConstruct } from '../constructs/workflow-construct';
-import { ObservabilityConstruct } from '../constructs/observability-construct';
+import { DataStoreConstruct } from '../constructs/data-store';
+import { MessagingConstruct } from '../constructs/messaging';
+import { ComputeConstruct } from '../constructs/compute';
+import { SchedulingConstruct } from '../constructs/scheduling';
+import { WorkflowConstruct } from '../constructs/workflow';
+import { ObservabilityConstruct } from '../constructs/observability';
 
 /**
  * Main stack composing all Flight Deal Notifier constructs.

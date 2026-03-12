@@ -25,7 +25,7 @@ public class DynamoDbPriceRecordDao implements PriceRecordDao {
   @Inject
   public DynamoDbPriceRecordDao(DynamoDbEnhancedClient enhancedClient) {
     this.table =
-        enhancedClient.table("FlightPriceHistory", TableSchema.fromBean(PriceRecordEntity.class));
+        enhancedClient.table(PriceRecordEntity.TABLE_NAME, TableSchema.fromBean(PriceRecordEntity.class));
   }
 
   @Override

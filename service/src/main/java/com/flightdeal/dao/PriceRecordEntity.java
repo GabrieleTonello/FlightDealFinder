@@ -23,6 +23,8 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortK
 @DynamoDbBean
 public class PriceRecordEntity {
 
+  public static final String TABLE_NAME = "FlightPriceHistory";
+
   private String destination;
   private String timestamp;
   private BigDecimal price;

@@ -134,7 +134,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 10.4 Create `messaging-construct.ts` under `infra/lib/`
     - Define SNS Deal Topic, SQS Deal Queue (subscribed to topic, visibility timeout >= 6x Lambda timeout, redrive policy maxReceiveCount=3), SQS Dead Letter Queue (14-day retention)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 14.2_
-  - [ ] 10.5 Create `compute-construct.ts` under `infra/lib/`
+  - [x] 10.5 Create `compute-construct.ts` under `infra/lib/`
     - Define Flight Search Lambda and Workflow Trigger Lambda with Java 25 runtime, reserved concurrency, memory, timeout settings, IAM roles with least-privilege permissions (DynamoDB write, SNS publish, SQS consume, Step Functions start execution)
     - _Requirements: 14.1, 14.4, 15.1, 15.2, 15.3, 20.1_
   - [ ] 10.6 Create `workflow-construct.ts` under `infra/lib/`

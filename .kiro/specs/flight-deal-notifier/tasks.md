@@ -180,13 +180,13 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 14.6 Create `NotificationServiceTest.java` under `service/src/test/java/com/flightdeal/service/`
     - Test with Mockito mock for SesClient. Cover: successful email send returns messageId, email body contains all deal fields (destination, price, departure, return, airline), multiple deals formatted correctly, SES throws exception wrapped as RuntimeException, subject line singular/plural deal count.
     - _Requirements: 9.1, 9.2, 9.3, 17.1, 17.5_
-  - [ ] 14.7 Create `MetricsEmitterTest.java` under `service/src/test/java/com/flightdeal/metrics/`
+  - [x] 14.7 Create `MetricsEmitterTest.java` under `service/src/test/java/com/flightdeal/metrics/`
     - Test with Mockito mock for CloudWatchClient. Cover: each emit method (emitDealsFound, emitDestinationsSearched, emitExecutionDuration, emitWorkflowsStarted, emitStartFailures, emitMatchesFound, emitNotificationsSent) calls putMetricData with correct namespace, metric name, value, and unit.
     - _Requirements: 11.1, 11.2, 11.3, 17.1, 17.5_
-  - [ ] 14.8 Create `GoogleCalendarClientTest.java` under `service/src/test/java/com/flightdeal/proxy/`
+  - [x] 14.8 Create `GoogleCalendarClientTest.java` under `service/src/test/java/com/flightdeal/proxy/`
     - Test with Mockito mock for HttpClient. Cover: successful response with busy periods returns computed free windows, empty busy periods returns full range as free, non-200 status throws CalendarApiException with HTTP_ERROR, timeout throws CalendarApiException with TIMEOUT, IOException throws CalendarApiException with IO_ERROR, malformed JSON throws CalendarApiException with PARSE_ERROR, no calendar data for calendarId returns full range.
     - _Requirements: 7.1, 17.1, 17.5_
-  - [ ] 14.9 Create `DynamoDbPriceRecordDaoTest.java` under `service/src/test/java/com/flightdeal/dao/`
+  - [x] 14.9 Create `DynamoDbPriceRecordDaoTest.java` under `service/src/test/java/com/flightdeal/dao/`
     - Test with Mockito mock for DynamoDbEnhancedClient and DynamoDbTable. Cover: save calls putItem, save retries on first failure then succeeds, save fails after 3 retries and logs error, saveBatch calls save for each entity, InterruptedException during retry sleep exits gracefully.
     - _Requirements: 3.1, 3.3, 17.1, 17.5_
   - [ ] 14.10 Run `gradle test jacocoTestReport jacocoTestCoverageVerification` and verify 90% branch and line coverage

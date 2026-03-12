@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'jacoco'
+    id 'checkstyle'
     id 'com.diffplug.spotless' version '7.0.2'
     id 'software.amazon.smithy.gradle.smithy-base' version '1.4.0'
 }
@@ -182,3 +183,15 @@ spotless {
 
 // Run spotless check as part of the build
 check.dependsOn 'spotlessCheck'
+
+// Checkstyle static analysis
+checkstyle {
+    toolVersion = '10.21.4'
+    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+    maxWarnings = 0
+}
+
+// Exclude Smithy-generated code from Checkstyle
+tasks.withType(Checkstyle).configureEach {
+    exclude '**/generated/**'
+}

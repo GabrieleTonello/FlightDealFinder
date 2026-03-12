@@ -84,7 +84,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - _Requirements: 7.1, 7.2, 7.3, 17.1, 17.5_
 
 - [ ] 6. Implement Flight Matcher
-  - [ ] 6.1 Create `FlightMatcher.java` under `service/src/main/java/com/flightdeal/service/`
+  - [x] 6.1 Create `FlightMatcher.java` under `service/src/main/java/com/flightdeal/service/`
     - Implement matching logic: for each deal, check if departure >= window start AND return <= window end; collect matches; sort by price ascending; return matched deals or empty list
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
   - [ ]* 6.2 Write property test: Flight matching predicate correctness

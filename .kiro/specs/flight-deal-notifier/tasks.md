@@ -165,7 +165,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 14.1 Add JaCoCo Gradle plugin to `service/build.gradle` with 90% minimum coverage enforcement
     - Configure `jacoco` plugin, `jacocoTestReport` (HTML + XML), and `jacocoTestCoverageVerification` with 0.9 minimum for both `BRANCH` and `LINE` counters. Wire `check` task to depend on verification. Exclude Guice modules and Lombok-generated code from coverage.
     - _Requirements: 17.1, 17.3, 17.4_
-  - [ ] 14.2 Create `FlightSearchHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`
+  - [x] 14.2 Create `FlightSearchHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`
     - Test with Mockito mocks for FlightApiClient, PriceRecordDao, SnsClient, MetricsEmitter. Cover: success path (deals found for all destinations), partial failures (some destinations throw FlightApiException), all destinations fail, empty results from API, DynamoDB saveBatch called with correct entities, SNS publish with retry on failure, SNS publish serialization failure, metrics emission, empty destinations list.
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.3, 4.1, 4.3, 17.1, 17.5_
   - [ ] 14.3 Create `WorkflowTriggerHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`

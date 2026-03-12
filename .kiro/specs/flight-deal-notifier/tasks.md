@@ -168,7 +168,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 14.2 Create `FlightSearchHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`
     - Test with Mockito mocks for FlightApiClient, PriceRecordDao, SnsClient, MetricsEmitter. Cover: success path (deals found for all destinations), partial failures (some destinations throw FlightApiException), all destinations fail, empty results from API, DynamoDB saveBatch called with correct entities, SNS publish with retry on failure, SNS publish serialization failure, metrics emission, empty destinations list.
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.3, 4.1, 4.3, 17.1, 17.5_
-  - [ ] 14.3 Create `WorkflowTriggerHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`
+  - [x] 14.3 Create `WorkflowTriggerHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`
     - Test with Mockito mocks for SfnClient, MetricsEmitter, ObjectMapper. Cover: successful workflow start (verify startExecution called with correct ARN and input), StartExecution failure throws RuntimeException, multiple SQS records processed, metrics emitted on success and failure.
     - _Requirements: 6.1, 6.2, 6.3, 17.1, 17.5_
   - [ ] 14.4 Create `CalendarServiceTest.java` under `service/src/test/java/com/flightdeal/service/`

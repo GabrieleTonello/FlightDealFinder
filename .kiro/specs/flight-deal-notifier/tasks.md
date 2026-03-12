@@ -171,7 +171,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 14.3 Create `WorkflowTriggerHandlerTest.java` under `service/src/test/java/com/flightdeal/handler/`
     - Test with Mockito mocks for SfnClient, MetricsEmitter, ObjectMapper. Cover: successful workflow start (verify startExecution called with correct ARN and input), StartExecution failure throws RuntimeException, multiple SQS records processed, metrics emitted on success and failure.
     - _Requirements: 6.1, 6.2, 6.3, 17.1, 17.5_
-  - [ ] 14.4 Create `CalendarServiceTest.java` under `service/src/test/java/com/flightdeal/service/`
+  - [x] 14.4 Create `CalendarServiceTest.java` under `service/src/test/java/com/flightdeal/service/`
     - Test with Mockito mock for GoogleCalendarClient. Cover: successful lookup returns free windows, date range computed from earliest departure to latest return, null/empty deals list returns empty, CalendarApiException wrapped as RuntimeException.
     - _Requirements: 7.1, 7.2, 7.3, 17.1, 17.5_
   - [ ] 14.5 Create `FlightMatcherTest.java` under `service/src/test/java/com/flightdeal/service/`

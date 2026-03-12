@@ -537,7 +537,7 @@ flight-deal-notifier/
 │       │   ├── dao/
 │       │   │   ├── PriceRecordDao.java
 │       │   │   └── DynamoDbPriceRecordDao.java
-│       │   ├── module/
+│       │   ├── guice/
 │       │   │   ├── FlightSearchModule.java
 │       │   │   ├── WorkflowTriggerModule.java
 │       │   │   ├── CalendarModule.java

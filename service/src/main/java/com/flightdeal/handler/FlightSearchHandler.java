@@ -9,7 +9,7 @@ import com.flightdeal.dao.PriceRecordEntity;
 import com.flightdeal.generated.model.FlightDeal;
 import com.flightdeal.generated.model.SearchError;
 import com.flightdeal.metrics.MetricsEmitter;
-import com.flightdeal.module.FlightSearchModule;
+import com.flightdeal.guice.FlightSearchModule;
 import com.flightdeal.proxy.FlightApiClient;
 import com.flightdeal.proxy.FlightApiException;
 import com.google.inject.Guice;

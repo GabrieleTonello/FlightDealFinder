@@ -1,4 +1,4 @@
-package com.flightdeal.module;
+package com.flightdeal.guice;
 
 import com.flightdeal.dao.DynamoDbPriceRecordDao;
 import com.flightdeal.dao.PriceRecordDao;

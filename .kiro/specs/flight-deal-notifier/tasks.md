@@ -50,7 +50,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - Mock FlightApiClient, DynamoDB client, SNS client using Mockito
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.3, 4.1, 4.3, 17.1, 17.5_
 
-- [~] 3. Checkpoint - Ensure all tests pass
+- [-] 3. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Implement Workflow Trigger Lambda handler

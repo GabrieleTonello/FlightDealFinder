@@ -1,5 +1,6 @@
 package com.flightdeal.dao;
 
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,12 +9,9 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
-import java.math.BigDecimal;
-
 /**
- * DynamoDB bean entity for the FlightPriceHistory table.
- * Maps directly to the table schema with destination as partition key
- * and timestamp as sort key.
+ * DynamoDB bean entity for the FlightPriceHistory table. Maps directly to the table schema with
+ * destination as partition key and timestamp as sort key.
  */
 @Data
 @Builder
@@ -22,21 +20,21 @@ import java.math.BigDecimal;
 @DynamoDbBean
 public class PriceRecordEntity {
 
-    private String destination;
-    private String timestamp;
-    private BigDecimal price;
-    private String departureDate;
-    private String returnDate;
-    private String airline;
-    private String retrievalTimestamp;
+  private String destination;
+  private String timestamp;
+  private BigDecimal price;
+  private String departureDate;
+  private String returnDate;
+  private String airline;
+  private String retrievalTimestamp;
 
-    @DynamoDbPartitionKey
-    public String getDestination() {
-        return destination;
-    }
+  @DynamoDbPartitionKey
+  public String getDestination() {
+    return destination;
+  }
 
-    @DynamoDbSortKey
-    public String getTimestamp() {
-        return timestamp;
-    }
+  @DynamoDbSortKey
+  public String getTimestamp() {
+    return timestamp;
+  }
 }

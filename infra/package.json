@@ -5,7 +5,9 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "format": "prettier --write 'bin/**/*.ts' 'lib/**/*.ts' 'test/**/*.ts'",
+    "format:check": "prettier --check 'bin/**/*.ts' 'lib/**/*.ts' 'test/**/*.ts'"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.175.1",
@@ -18,6 +20,7 @@
     "ts-jest": "^29.2.5",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.12.0",
-    "aws-cdk": "^2.175.1"
+    "aws-cdk": "^2.175.1",
+    "prettier": "^3.4.2"
   }
 }

@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'jacoco'
+    id 'com.diffplug.spotless' version '7.0.2'
     id 'software.amazon.smithy.gradle.smithy-base' version '1.4.0'
 }
 
@@ -167,3 +168,17 @@ jacocoTestCoverageVerification {
 
 test.finalizedBy jacocoTestReport
 check.dependsOn jacocoTestCoverageVerification
+
+// Spotless code formatting — google-java-format
+spotless {
+    java {
+        target 'src/**/*.java'
+        googleJavaFormat('1.25.2')
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+// Run spotless check as part of the build
+check.dependsOn 'spotlessCheck'

@@ -8,19 +8,19 @@ import java.util.List;
  */
 public interface PriceRecordDao {
 
-    /**
-     * Saves a single price record entity to the Price Store.
-     * Retry logic (up to 3 retries with exponential backoff) is handled by the implementation.
-     *
-     * @param entity the price record entity to persist
-     */
-    void save(PriceRecordEntity entity);
+  /**
+   * Saves a single price record entity to the Price Store. Retry logic (up to 3 retries with
+   * exponential backoff) is handled by the implementation.
+   *
+   * @param entity the price record entity to persist
+   */
+  void save(PriceRecordEntity entity);
 
-    /**
-     * Saves a batch of price record entities to the Price Store.
-     * Each entity is written individually with retry logic applied per write.
-     *
-     * @param entities the list of price record entities to persist
-     */
-    void saveBatch(List<PriceRecordEntity> entities);
+  /**
+   * Saves a batch of price record entities to the Price Store. Each entity is written individually
+   * with retry logic applied per write.
+   *
+   * @param entities the list of price record entities to persist
+   */
+  void saveBatch(List<PriceRecordEntity> entities);
 }

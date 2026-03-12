@@ -145,16 +145,12 @@ export class ObservabilityConstruct extends Construct {
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'DynamoDB Read Capacity',
-        left: [
-          props.table.metricConsumedReadCapacityUnits({ statistic: 'Sum' }),
-        ],
+        left: [props.table.metricConsumedReadCapacityUnits({ statistic: 'Sum' })],
         width: 12,
       }),
       new cloudwatch.GraphWidget({
         title: 'DynamoDB Write Capacity',
-        left: [
-          props.table.metricConsumedWriteCapacityUnits({ statistic: 'Sum' }),
-        ],
+        left: [props.table.metricConsumedWriteCapacityUnits({ statistic: 'Sum' })],
         width: 12,
       }),
     );
@@ -163,16 +159,12 @@ export class ObservabilityConstruct extends Construct {
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'SQS Message Age',
-        left: [
-          props.dealQueue.metricApproximateAgeOfOldestMessage({ statistic: 'Maximum' }),
-        ],
+        left: [props.dealQueue.metricApproximateAgeOfOldestMessage({ statistic: 'Maximum' })],
         width: 12,
       }),
       new cloudwatch.GraphWidget({
         title: 'SQS Approximate Message Count',
-        left: [
-          props.dealQueue.metricApproximateNumberOfMessagesVisible({ statistic: 'Maximum' }),
-        ],
+        left: [props.dealQueue.metricApproximateNumberOfMessagesVisible({ statistic: 'Maximum' })],
         width: 12,
       }),
     );

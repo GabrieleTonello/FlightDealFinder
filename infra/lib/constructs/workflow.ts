@@ -40,15 +40,11 @@ export class WorkflowConstruct extends Construct {
 
     // Optionally publish failure event to SNS before failing (Req 10.3)
     if (props.failureTopic) {
-      const publishFailure = new tasks.SnsPublish(
-        this,
-        'PublishFailureEvent',
-        {
-          topic: props.failureTopic,
-          message: sfn.TaskInput.fromJsonPathAt('$'),
-          resultPath: sfn.JsonPath.DISCARD,
-        },
-      );
+      const publishFailure = new tasks.SnsPublish(this, 'PublishFailureEvent', {
+        topic: props.failureTopic,
+        message: sfn.TaskInput.fromJsonPathAt('$'),
+        resultPath: sfn.JsonPath.DISCARD,
+      });
       failureHandler.next(publishFailure).next(failState);
     } else {
       failureHandler.next(failState);
@@ -119,19 +115,14 @@ export class WorkflowConstruct extends Construct {
 
     // --- Choice: check if matchedDeals is empty (Req 8.4) ---
     const checkMatches = new sfn.Choice(this, 'CheckMatches')
-      .when(
-        sfn.Condition.isNotPresent('$.matchedDeals[0]'),
-        noMatchEnd,
-      )
+      .when(sfn.Condition.isNotPresent('$.matchedDeals[0]'), noMatchEnd)
       .otherwise(sendNotification.next(successEnd));
 
     // --- Assemble the workflow chain ---
     // CalendarLookup → FlightMatching → CheckMatches → SendNotification → SuccessEnd
     //                                                → NoMatchEnd
     // Any step catch → FailureHandler → (PublishFailureEvent →) WorkflowFailed
-    const definition = calendarLookup
-      .next(flightMatching)
-      .next(checkMatches);
+    const definition = calendarLookup.next(flightMatching).next(checkMatches);
 
     // Standard Workflow state machine (Req 10.1, 10.2, 10.3)
     this.stateMachine = new sfn.StateMachine(this, 'MatchingWorkflow', {

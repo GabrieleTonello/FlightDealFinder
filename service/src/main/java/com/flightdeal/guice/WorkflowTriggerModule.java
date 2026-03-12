@@ -10,38 +10,38 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.sfn.SfnClient;
 
 /**
- * Guice module for the Workflow Trigger Lambda handler.
- * Binds all dependencies needed by WorkflowTriggerHandler.
+ * Guice module for the Workflow Trigger Lambda handler. Binds all dependencies needed by
+ * WorkflowTriggerHandler.
  */
 public class WorkflowTriggerModule extends AbstractModule {
 
-    @Provides
-    @Singleton
-    SfnClient provideSfnClient() {
-        return SfnClient.create();
-    }
+  @Provides
+  @Singleton
+  SfnClient provideSfnClient() {
+    return SfnClient.create();
+  }
 
-    @Provides
-    @Singleton
-    CloudWatchClient provideCloudWatchClient() {
-        return CloudWatchClient.create();
-    }
+  @Provides
+  @Singleton
+  CloudWatchClient provideCloudWatchClient() {
+    return CloudWatchClient.create();
+  }
 
-    @Provides
-    @Singleton
-    MetricsEmitter provideMetricsEmitter(CloudWatchClient cloudWatchClient) {
-        return new MetricsEmitter(cloudWatchClient);
-    }
+  @Provides
+  @Singleton
+  MetricsEmitter provideMetricsEmitter(CloudWatchClient cloudWatchClient) {
+    return new MetricsEmitter(cloudWatchClient);
+  }
 
-    @Provides
-    @Singleton
-    ObjectMapper provideObjectMapper() {
-        return new ObjectMapper();
-    }
+  @Provides
+  @Singleton
+  ObjectMapper provideObjectMapper() {
+    return new ObjectMapper();
+  }
 
-    @Provides
-    @Named("STATE_MACHINE_ARN")
-    String provideStateMachineArn() {
-        return System.getenv("STATE_MACHINE_ARN");
-    }
+  @Provides
+  @Named("STATE_MACHINE_ARN")
+  String provideStateMachineArn() {
+    return System.getenv("STATE_MACHINE_ARN");
+  }
 }

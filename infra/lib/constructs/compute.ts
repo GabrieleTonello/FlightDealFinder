@@ -92,8 +92,6 @@ export class ComputeConstruct extends Construct {
     );
 
     // SQS event source mapping — Workflow Trigger Lambda consumes from Deal Queue (Req 6.1)
-    this.workflowTriggerLambda.addEventSource(
-      new lambdaEventSources.SqsEventSource(props.queue),
-    );
+    this.workflowTriggerLambda.addEventSource(new lambdaEventSources.SqsEventSource(props.queue));
   }
 }

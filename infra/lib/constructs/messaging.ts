@@ -35,8 +35,6 @@ export class MessagingConstruct extends Construct {
     });
 
     // Subscribe the Deal Queue to the Deal Topic (Req 5.1)
-    this.dealTopic.addSubscription(
-      new subscriptions.SqsSubscription(this.dealQueue),
-    );
+    this.dealTopic.addSubscription(new subscriptions.SqsSubscription(this.dealQueue));
   }
 }

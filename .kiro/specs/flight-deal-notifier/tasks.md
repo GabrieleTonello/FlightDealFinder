@@ -177,7 +177,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 14.5 Create `FlightMatcherTest.java` under `service/src/test/java/com/flightdeal/service/`
     - Test without mocks (pure logic). Cover: deal entirely within window matches, deal partially overlapping rejected, deal outside window rejected, multiple windows with matches, matched deals sorted by price ascending, null/empty deals returns empty, null/empty windows returns empty, single deal single window exact boundary match.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 17.2_
-  - [ ] 14.6 Create `NotificationServiceTest.java` under `service/src/test/java/com/flightdeal/service/`
+  - [x] 14.6 Create `NotificationServiceTest.java` under `service/src/test/java/com/flightdeal/service/`
     - Test with Mockito mock for SesClient. Cover: successful email send returns messageId, email body contains all deal fields (destination, price, departure, return, airline), multiple deals formatted correctly, SES throws exception wrapped as RuntimeException, subject line singular/plural deal count.
     - _Requirements: 9.1, 9.2, 9.3, 17.1, 17.5_
   - [ ] 14.7 Create `MetricsEmitterTest.java` under `service/src/test/java/com/flightdeal/metrics/`

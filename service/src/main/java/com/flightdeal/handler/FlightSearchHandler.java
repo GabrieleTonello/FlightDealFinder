@@ -46,8 +46,8 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
     @Inject private SnsClient snsClient;
     @Inject private MetricsEmitter metricsEmitter;
     private ObjectMapper objectMapper;
-    @Inject @Named("topicArn") private String topicArn;
-    @Inject @Named("destinations") private List<String> destinations;
+    @Inject @Named("TOPIC_ARN") private String topicArn;
+    @Inject @Named("DESTINATIONS") private List<String> destinations;
 
     /**
      * No-arg constructor for Lambda runtime.
@@ -66,8 +66,8 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
                                PriceRecordDao priceRecordDao,
                                SnsClient snsClient,
                                MetricsEmitter metricsEmitter,
-                               @Named("topicArn") String topicArn,
-                               @Named("destinations") List<String> destinations) {
+                               @Named("TOPIC_ARN") String topicArn,
+                               @Named("DESTINATIONS") List<String> destinations) {
         this.flightApiClient = flightApiClient;
         this.priceRecordDao = priceRecordDao;
         this.snsClient = snsClient;

@@ -74,13 +74,13 @@ public class FlightSearchModule extends AbstractModule {
     }
 
     @Provides
-    @Named("topicArn")
+    @Named("TOPIC_ARN")
     String provideTopicArn() {
         return System.getenv("TOPIC_ARN");
     }
 
     @Provides
-    @Named("destinations")
+    @Named("DESTINATIONS")
     List<String> provideDestinations() {
         String destinationsEnv = System.getenv("DESTINATIONS");
         if (destinationsEnv == null || destinationsEnv.isBlank()) {

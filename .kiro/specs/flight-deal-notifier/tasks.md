@@ -154,7 +154,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 12.1 Update `bin/app.ts` to compose all constructs into a single CDK stack
     - Import and instantiate all constructs (scheduling, data-store, messaging, compute, workflow, observability, pipeline), wire cross-construct references (Lambda ARNs, queue URLs, topic ARNs, state machine ARN)
     - _Requirements: 13.1, 13.2, 15.1_
-  - [ ]* 12.2 Write CDK assertion tests
+  - [x]* 12.2 Write CDK assertion tests
     - Validate EventBridge schedule rate and retry policy, SQS visibility timeout and redrive policy, DLQ retention, Lambda concurrency/memory/timeout, CloudWatch alarm thresholds and actions, IAM least-privilege policies, Step Functions retry policies
     - _Requirements: 1.1, 1.3, 5.2, 5.3, 5.4, 10.1, 12.1, 12.2, 12.3, 12.5, 14.1, 14.4, 15.3_
 

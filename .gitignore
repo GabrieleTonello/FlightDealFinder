@@ -31,3 +31,6 @@ Thumbs.db
 
 # Smithy build output
 service/build/
+
+# Kiro powers
+.kiro/powers

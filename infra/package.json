@@ -6,6 +6,8 @@
     "build": "tsc",
     "test": "jest",
     "cdk": "cdk",
+    "lint": "eslint 'bin/**/*.ts' 'lib/**/*.ts' 'test/**/*.ts'",
+    "lint:fix": "eslint --fix 'bin/**/*.ts' 'lib/**/*.ts' 'test/**/*.ts'",
     "format": "prettier --write 'bin/**/*.ts' 'lib/**/*.ts' 'test/**/*.ts'",
     "format:check": "prettier --check 'bin/**/*.ts' 'lib/**/*.ts' 'test/**/*.ts'"
   },
@@ -21,6 +23,10 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.12.0",
     "aws-cdk": "^2.175.1",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0"
   }
 }

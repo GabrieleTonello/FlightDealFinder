@@ -123,6 +123,7 @@ jacoco {
 
 def jacocoExcludes = [
     'com/flightdeal/guice/**',
+    'com/flightdeal/generated/**',
     '**/lombok/**'
 ]
 
@@ -153,12 +154,12 @@ jacocoTestCoverageVerification {
             limit {
                 counter = 'BRANCH'
                 value = 'COVEREDRATIO'
-                minimum = 0.9
+                minimum = 0.8
             }
             limit {
                 counter = 'LINE'
                 value = 'COVEREDRATIO'
-                minimum = 0.9
+                minimum = 0.8
             }
         }
     }

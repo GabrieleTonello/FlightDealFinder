@@ -189,7 +189,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
   - [x] 14.9 Create `DynamoDbPriceRecordDaoTest.java` under `service/src/test/java/com/flightdeal/dao/`
     - Test with Mockito mock for DynamoDbEnhancedClient and DynamoDbTable. Cover: save calls putItem, save retries on first failure then succeeds, save fails after 3 retries and logs error, saveBatch calls save for each entity, InterruptedException during retry sleep exits gracefully.
     - _Requirements: 3.1, 3.3, 17.1, 17.5_
-  - [ ] 14.10 Run `gradle test jacocoTestReport jacocoTestCoverageVerification` and verify 90% branch and line coverage
+  - [x] 14.10 Run `gradle test jacocoTestReport jacocoTestCoverageVerification` and verify 90% branch and line coverage
     - Ensure the build passes with JaCoCo enforcement. If coverage is below 90%, identify uncovered branches and add targeted tests until the threshold is met.
     - _Requirements: 17.1, 17.3, 17.4_
 

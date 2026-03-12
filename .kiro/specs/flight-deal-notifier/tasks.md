@@ -66,7 +66,7 @@ Incremental implementation of the Flight Deal Notifier system, starting with Smi
     - _Requirements: 6.1, 6.2, 6.3, 17.1, 17.5_
 
 - [ ] 5. Implement Calendar Service
-  - [ ] 5.1 Create `GoogleCalendarClient.java` proxy under `service/src/main/java/com/flightdeal/proxy/`
+  - [x] 5.1 Create `GoogleCalendarClient.java` proxy under `service/src/main/java/com/flightdeal/proxy/`
     - Implement Google Calendar API client: authenticate via OAuth2 credentials from SSM/Secrets Manager, retrieve free/busy windows for a date range
     - _Requirements: 7.1_
   - [ ] 5.2 Create `CalendarService.java` under `service/src/main/java/com/flightdeal/service/`

@@ -2,39 +2,48 @@
 #
 # Search for flights using the SerpApi Google Flights API.
 #
-# Required environment variables:
-#   SERPAPI_KEY          - Your SerpApi API key
+# Required environment variable:
+#   SERPAPI_KEY  - Your SerpApi API key
 #
-# Optional environment variables (with defaults):
-#   DEPARTURE_ID        - Departure airport IATA code (default: JFK)
-#   ARRIVAL_ID          - Arrival airport IATA code (default: CDG)
-#   OUTBOUND_DATE       - Departure date YYYY-MM-DD (default: 7 days from now)
-#   RETURN_DATE         - Return date YYYY-MM-DD (default: 14 days from now)
-#   CURRENCY            - Currency code (default: USD)
-#   LANGUAGE            - Language code (default: en)
-#   TRAVEL_CLASS        - 1=Economy, 2=Premium Economy, 3=Business, 4=First (default: 1)
-#   ADULTS              - Number of adults (default: 1)
-#   OUTPUT_FILE         - File to save JSON response (optional, prints to stdout if unset)
+# Usage:
+#   ./scripts/search-flights.sh <departure> <arrival> <outbound_date> <return_date> [output_file]
+#
+# Example:
+#   ./scripts/search-flights.sh JFK CDG 2025-08-01 2025-08-15
+#   ./scripts/search-flights.sh LAX NRT 2025-09-01 2025-09-10 results.json
 #
 
 set -euo pipefail
 
-# ---- Validate required env vars ----
+# ---- Fixed constants ----
+CURRENCY="EUR"
+LANGUAGE="en"
+TRAVEL_CLASS=1
+ADULTS=1
+
+# ---- Validate API key ----
 if [[ -z "${SERPAPI_KEY:-}" ]]; then
   echo "ERROR: SERPAPI_KEY environment variable is required." >&2
   echo "  export SERPAPI_KEY='your-api-key'" >&2
   exit 1
 fi
 
-# ---- Defaults ----
-DEPARTURE_ID="${DEPARTURE_ID:-JFK}"
-ARRIVAL_ID="${ARRIVAL_ID:-CDG}"
-OUTBOUND_DATE="${OUTBOUND_DATE:-$(date -d '+7 days' +%Y-%m-%d 2>/dev/null || date -v+7d +%Y-%m-%d)}"
-RETURN_DATE="${RETURN_DATE:-$(date -d '+14 days' +%Y-%m-%d 2>/dev/null || date -v+14d +%Y-%m-%d)}"
-CURRENCY="${CURRENCY:-USD}"
-LANGUAGE="${LANGUAGE:-en}"
-TRAVEL_CLASS="${TRAVEL_CLASS:-1}"
-ADULTS="${ADULTS:-1}"
+# ---- Validate arguments ----
+if [[ $# -lt 4 ]]; then
+  echo "Usage: $0 <departure> <arrival> <outbound_date> <return_date> [output_file]" >&2
+  echo "  departure     - IATA airport code (e.g. JFK, LAX, CDG)" >&2
+  echo "  arrival       - IATA airport code (e.g. NRT, FCO, BCN)" >&2
+  echo "  outbound_date - Departure date YYYY-MM-DD" >&2
+  echo "  return_date   - Return date YYYY-MM-DD" >&2
+  echo "  output_file   - Optional file to save JSON response" >&2
+  exit 1
+fi
+
+DEPARTURE_ID="$1"
+ARRIVAL_ID="$2"
+OUTBOUND_DATE="$3"
+RETURN_DATE="$4"
+OUTPUT_FILE="${5:-}"
 
 # ---- Build request URL ----
 BASE_URL="https://serpapi.com/search"
@@ -54,8 +63,6 @@ URL="${BASE_URL}?${PARAMS}"
 echo "Searching flights: ${DEPARTURE_ID} → ${ARRIVAL_ID}"
 echo "  Outbound: ${OUTBOUND_DATE}"
 echo "  Return:   ${RETURN_DATE}"
-echo "  Currency: ${CURRENCY}"
-echo "  Class:    ${TRAVEL_CLASS}"
 echo ""
 
 # ---- Make the API call ----
@@ -70,7 +77,7 @@ if [[ "${HTTP_CODE}" -ne 200 ]]; then
 fi
 
 # ---- Output ----
-if [[ -n "${OUTPUT_FILE:-}" ]]; then
+if [[ -n "${OUTPUT_FILE}" ]]; then
   echo "${BODY}" > "${OUTPUT_FILE}"
   echo "Response saved to ${OUTPUT_FILE}"
 else

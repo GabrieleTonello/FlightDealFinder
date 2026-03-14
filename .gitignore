@@ -25,6 +25,9 @@ node_modules/
 cdk.out/
 dist/
 
+# Environment config (contains account IDs)
+infra/.env
+
 # OS
 .DS_Store
 Thumbs.db

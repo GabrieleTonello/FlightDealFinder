@@ -6,7 +6,7 @@ const app = new cdk.App();
 
 new FlightDealPipeline(app, 'FlightDealPipeline', {
   githubOwner: 'GabrieleTonello',
-  githubRepo: 'flight-deal-notifier',
+  githubRepo: 'FlightDealFinder',
   githubBranch: 'main',
   env: {
     account: '976193231624',

@@ -23,12 +23,14 @@ export class FlightDealPipeline extends cdk.Stack {
       input: source,
       installCommands: [
         'yum install -y java-21-amazon-corretto-devel',
+        'alternatives --set java /usr/lib/jvm/java-21-amazon-corretto/bin/java',
+        'alternatives --set javac /usr/lib/jvm/java-21-amazon-corretto/bin/javac',
         'export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto',
-        'export PATH=$JAVA_HOME/bin:$PATH',
       ],
       commands: [
         'export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto',
         'export PATH=$JAVA_HOME/bin:$PATH',
+        'java -version',
         'cd service && ./gradlew clean build && cd ..',
         'cd infra && npm ci && npm run build && npx cdk synth',
       ],

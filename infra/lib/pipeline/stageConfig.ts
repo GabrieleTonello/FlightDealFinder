@@ -10,7 +10,7 @@ export const STAGE_CONFIGS: StageConfig[] = [
     name: 'Dev',
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
-      region: 'us-east-1',
+      region: 'eu-west-1',
     },
   },
   {

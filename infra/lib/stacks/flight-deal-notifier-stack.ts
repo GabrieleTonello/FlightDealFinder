@@ -119,10 +119,10 @@ export class FlightDealNotifierStack extends Stack {
       }),
     );
 
-    // Add AppConfig Lambda extension layer (us-east-1 ARN, adjust for your region)
+    // Add AppConfig Lambda extension layer (region-aware)
+    const appConfigExtensionArn = `arn:aws:lambda:${this.region}:027255383542:layer:AWS-AppConfig-Extension:128`;
     compute.flightSearchLambda.addLayers(
-      lambda.LayerVersion.fromLayerVersionArn(this, 'AppConfigExtension',
-        'arn:aws:lambda:us-east-1:027255383542:layer:AWS-AppConfig-Extension:128'),
+      lambda.LayerVersion.fromLayerVersionArn(this, 'AppConfigExtension', appConfigExtensionArn),
     );
 
     // 7. Observability — CloudWatch dashboard and alarms

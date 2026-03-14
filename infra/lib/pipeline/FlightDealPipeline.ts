@@ -22,7 +22,7 @@ export class FlightDealPipeline extends cdk.Stack {
     const synthStep = new pipelines.ShellStep('Synth', {
       input: source,
       commands: [
-        './gradlew -p service clean build',
+        'cd service && ./gradlew clean build && cd ..',
         'cd infra && npm ci && npm run build && npx cdk synth',
       ],
       primaryOutputDirectory: 'infra/cdk.out',

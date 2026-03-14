@@ -215,9 +215,9 @@ shadowJar {
 
 // Copy the shadow JAR to a clean directory for CDK deployment
 task lambdaPackage(type: Copy) {
-    dependsOn shadowJar
+    dependsOn shadowJar, jar
     from shadowJar.archiveFile
-    into "${buildDir}/lambda"
+    into layout.buildDirectory.dir('lambda')
     rename { 'lambda.jar' }
 }
 

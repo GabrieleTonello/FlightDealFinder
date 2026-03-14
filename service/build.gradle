@@ -213,12 +213,13 @@ shadowJar {
     mergeServiceFiles()
 }
 
-// Copy the shadow JAR to a clean directory for CDK deployment
+// Copy the shadow JAR as a ZIP for Lambda deployment
+// A shadow/fat JAR has classes at the root, which is exactly what Lambda expects in a ZIP
 task lambdaPackage(type: Copy) {
     dependsOn shadowJar, jar
     from shadowJar.archiveFile
     into layout.buildDirectory.dir('lambda')
-    rename { 'lambda.jar' }
+    rename { 'lambda.zip' }
 }
 
 // Build produces the fat JAR

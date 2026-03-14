@@ -3,14 +3,18 @@ package com.flightdeal.property;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.dao.PriceRecordDao;
-import com.flightdeal.generated.model.FlightDeal;
 import com.flightdeal.handler.FlightSearchHandler;
 import com.flightdeal.metrics.MetricsEmitter;
 import com.flightdeal.proxy.FlightApiClient;
-import java.math.BigDecimal;
+import com.flightdeal.proxy.FlightSearchResponse;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.jqwik.api.*;
@@ -21,12 +25,10 @@ import software.amazon.awssdk.services.sns.model.SnsException;
 
 /**
  * Property 5: For any operation that fails transiently, retry delays are monotonically increasing.
- * Test the SNS publish retry by mocking SnsClient to fail N times then succeed, and verify the
- * number of calls.
- *
- * <p>Validates: Requirements 3.3, 4.3
  */
 class RetryBackoffPropertyTest {
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Property(tries = 100)
   void retryDelaysAreMonotonicallyIncreasing(
@@ -37,18 +39,10 @@ class RetryBackoffPropertyTest {
     SnsClient snsClient = mock(SnsClient.class);
     MetricsEmitter metricsEmitter = mock(MetricsEmitter.class);
 
-    when(flightApiClient.searchDeals("TestDest"))
-        .thenReturn(
-            List.of(
-                FlightDeal.builder()
-                    .destination("TestDest")
-                    .price(new BigDecimal("300.00"))
-                    .departureDate("2025-06-01")
-                    .returnDate("2025-06-08")
-                    .airline("TestAir")
-                    .build()));
+    JsonNode sampleFlight = createSampleFlight();
+    when(flightApiClient.searchFlights(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(new FlightSearchResponse(List.of(sampleFlight), List.of(), "{}"));
 
-    // Configure SNS to fail N times then succeed
     AtomicInteger callCount = new AtomicInteger(0);
     when(snsClient.publish(any(PublishRequest.class)))
         .thenAnswer(
@@ -67,11 +61,12 @@ class RetryBackoffPropertyTest {
             snsClient,
             metricsEmitter,
             "arn:aws:sns:us-east-1:123456789:TestTopic",
-            List.of("TestDest"));
+            List.of("JFK-CDG"),
+            "2025-07-01",
+            "2025-07-15");
 
     handler.handleRequest(new Object(), null);
 
-    // SNS_MAX_RETRIES is 3 in FlightSearchHandler
     int expectedCalls = Math.min(failuresBeforeSuccess + 1, 3);
     assertEquals(
         expectedCalls,
@@ -86,5 +81,28 @@ class RetryBackoffPropertyTest {
   @Provide
   Arbitrary<Integer> failuresBeforeSuccess() {
     return Arbitraries.integers().between(0, 4);
+  }
+
+  private static JsonNode createSampleFlight() {
+    ObjectNode flight = MAPPER.createObjectNode();
+    flight.put("price", 300);
+    flight.put("total_duration", 480);
+    ArrayNode flights = MAPPER.createArrayNode();
+    ObjectNode segment = MAPPER.createObjectNode();
+    ObjectNode dep = MAPPER.createObjectNode();
+    dep.put("id", "JFK");
+    dep.put("name", "JFK Airport");
+    dep.put("time", "2025-07-01 10:00");
+    segment.set("departure_airport", dep);
+    ObjectNode arr = MAPPER.createObjectNode();
+    arr.put("id", "CDG");
+    arr.put("name", "CDG Airport");
+    arr.put("time", "2025-07-01 18:00");
+    segment.set("arrival_airport", arr);
+    segment.put("airline", "TestAir");
+    segment.put("flight_number", "TA100");
+    flights.add(segment);
+    flight.set("flights", flights);
+    return flight;
   }
 }

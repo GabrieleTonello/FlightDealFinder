@@ -2,16 +2,14 @@ package com.flightdeal.handler;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.dao.PriceRecordEntity;
-import com.flightdeal.generated.model.FlightDeal;
-import com.flightdeal.generated.model.SearchError;
 import com.flightdeal.guice.FlightSearchModule;
 import com.flightdeal.metrics.MetricsEmitter;
 import com.flightdeal.proxy.FlightApiClient;
 import com.flightdeal.proxy.FlightApiException;
+import com.flightdeal.proxy.FlightSearchResponse;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -27,11 +25,10 @@ import software.amazon.awssdk.services.sns.model.PublishRequest;
 /**
  * Lambda handler for the Flight Search function. Triggered by EventBridge on an hourly schedule.
  *
- * <p>Iterates configured destinations, queries the external flight API per destination, writes
- * deals to DynamoDB via PriceRecordDao, publishes a deal batch to SNS, and emits CloudWatch
- * metrics.
+ * <p>Iterates configured routes, queries the SerpApi Google Flights API per route, writes deals to
+ * DynamoDB via PriceRecordDao, publishes the raw response to SNS, and emits CloudWatch metrics.
  *
- * <p>Per-destination error isolation ensures one failing destination does not block others.
+ * <p>Per-route error isolation ensures one failing route does not block others.
  */
 @Slf4j
 public class FlightSearchHandler implements RequestHandler<Object, Map<String, Object>> {
@@ -43,15 +40,22 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
   @Inject private PriceRecordDao priceRecordDao;
   @Inject private SnsClient snsClient;
   @Inject private MetricsEmitter metricsEmitter;
-  private ObjectMapper objectMapper;
 
   @Inject
   @Named("TOPIC_ARN")
   private String topicArn;
 
   @Inject
-  @Named("DESTINATIONS")
-  private List<String> destinations;
+  @Named("ROUTES")
+  private List<String> routes;
+
+  @Inject
+  @Named("OUTBOUND_DATE")
+  private String outboundDate;
+
+  @Inject
+  @Named("RETURN_DATE")
+  private String returnDate;
 
   /**
    * No-arg constructor for Lambda runtime. Creates a Guice injector with FlightSearchModule and
@@ -59,7 +63,6 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
    */
   public FlightSearchHandler() {
     Guice.createInjector(new FlightSearchModule()).injectMembers(this);
-    this.objectMapper = new ObjectMapper();
   }
 
   /** Constructor for dependency injection (used by Guice and tests). */
@@ -70,127 +73,159 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
       SnsClient snsClient,
       MetricsEmitter metricsEmitter,
       @Named("TOPIC_ARN") String topicArn,
-      @Named("DESTINATIONS") List<String> destinations) {
+      @Named("ROUTES") List<String> routes,
+      @Named("OUTBOUND_DATE") String outboundDate,
+      @Named("RETURN_DATE") String returnDate) {
     this.flightApiClient = flightApiClient;
     this.priceRecordDao = priceRecordDao;
     this.snsClient = snsClient;
     this.metricsEmitter = metricsEmitter;
-    this.objectMapper = new ObjectMapper();
     this.topicArn = topicArn;
-    this.destinations = destinations;
+    this.routes = routes;
+    this.outboundDate = outboundDate;
+    this.returnDate = returnDate;
   }
 
   @Override
   public Map<String, Object> handleRequest(Object event, Context context) {
     long startTime = System.currentTimeMillis();
-    List<FlightDeal> allDeals = new ArrayList<>();
-    List<SearchError> errors = new ArrayList<>();
+    List<PriceRecordEntity> allEntities = new ArrayList<>();
+    List<Map<String, String>> errors = new ArrayList<>();
+    int totalFlights = 0;
 
-    // Iterate all configured destinations with per-destination error isolation (Req 2.1, 2.3)
-    for (String destination : destinations) {
+    for (String route : routes) {
+      String trimmedRoute = route.trim();
+      String[] parts = trimmedRoute.split("-");
+      if (parts.length != 2) {
+        log.warn("Invalid route format: {}", trimmedRoute);
+        continue;
+      }
+      String departureId = parts[0];
+      String arrivalId = parts[1];
+
       try {
-        List<FlightDeal> deals = flightApiClient.searchDeals(destination.trim());
+        FlightSearchResponse response =
+            flightApiClient.searchFlights(departureId, arrivalId, outboundDate, returnDate);
 
-        // Skip destinations with empty results (Req 2.4)
-        if (deals == null || deals.isEmpty()) {
-          log.info("No deals found for destination: {}", destination);
-          continue;
+        List<PriceRecordEntity> entities =
+            parseFlights(response, trimmedRoute, departureId, arrivalId);
+        totalFlights += entities.size();
+
+        if (!entities.isEmpty()) {
+          priceRecordDao.saveBatch(entities);
+          allEntities.addAll(entities);
         }
 
-        allDeals.addAll(deals);
+        // Publish raw response to SNS
+        if (response.hasFlights()) {
+          publishRawResponse(response.rawResponse());
+        }
       } catch (FlightApiException e) {
-        // Per-destination error isolation: log and continue (Req 2.3)
         log.warn(
-            "Flight API error for destination {}: {} [{}]",
-            e.getDestination(),
+            "Flight API error for route {}: {} [{}]",
+            trimmedRoute,
             e.getMessage(),
             e.getErrorType(),
             e);
-        errors.add(
-            SearchError.builder()
-                .destination(e.getDestination())
-                .errorMessage(e.getMessage())
-                .errorType(e.getErrorType())
-                .build());
+        Map<String, String> error = new LinkedHashMap<>();
+        error.put("route", trimmedRoute);
+        error.put("errorMessage", e.getMessage());
+        error.put("errorType", e.getErrorType());
+        errors.add(error);
       }
     }
 
-    // Write deals to DynamoDB Price Store via DAO (Req 3.1, 3.2, 3.3)
-    String retrievalTimestamp = Instant.now().toString();
-    if (!allDeals.isEmpty()) {
-      List<PriceRecordEntity> entities =
-          allDeals.stream()
-              .map(
-                  deal ->
-                      PriceRecordEntity.builder()
-                          .destination(deal.getDestination())
-                          .timestamp(retrievalTimestamp)
-                          .price(deal.getPrice())
-                          .departureDate(deal.getDepartureDate())
-                          .returnDate(deal.getReturnDate())
-                          .airline(deal.getAirline())
-                          .retrievalTimestamp(retrievalTimestamp)
-                          .build())
-              .toList();
-      priceRecordDao.saveBatch(entities);
-    }
-
-    // Publish deal batch to SNS (Req 4.1, 4.2, 4.3)
-    if (!allDeals.isEmpty()) {
-      publishDealBatch(allDeals, retrievalTimestamp);
-    }
-
-    // Emit CloudWatch metrics (Req 11.1)
     long duration = System.currentTimeMillis() - startTime;
-    metricsEmitter.emitDealsFound(allDeals.size());
-    metricsEmitter.emitDestinationsSearched(destinations.size());
+    metricsEmitter.emitDealsFound(totalFlights);
+    metricsEmitter.emitDestinationsSearched(routes.size());
     metricsEmitter.emitExecutionDuration(duration);
 
-    // Build response
     Map<String, Object> result = new LinkedHashMap<>();
-    result.put("dealsFound", allDeals.size());
-    result.put("destinationsSearched", destinations.size());
+    result.put("dealsFound", totalFlights);
+    result.put("routesSearched", routes.size());
     result.put("errorsCount", errors.size());
     result.put("durationMs", duration);
     return result;
   }
 
-  /**
-   * Publishes a deal batch message to SNS with retry (up to 3 times, exponential backoff). Message
-   * contains: deals list, searchTimestamp, destinationsSearched count (Req 4.1, 4.2, 4.3).
-   */
-  void publishDealBatch(List<FlightDeal> deals, String searchTimestamp) {
-    Map<String, Object> batchMessage = new LinkedHashMap<>();
+  public List<PriceRecordEntity> parseFlights(
+      FlightSearchResponse response, String route, String departureId, String arrivalId) {
+    String timestamp = Instant.now().toString();
+    List<PriceRecordEntity> entities = new ArrayList<>();
 
-    List<Map<String, Object>> dealMaps =
-        deals.stream()
-            .map(
-                deal -> {
-                  Map<String, Object> m = new LinkedHashMap<>();
-                  m.put("destination", deal.getDestination());
-                  m.put("price", deal.getPrice());
-                  m.put("departureDate", deal.getDepartureDate());
-                  m.put("returnDate", deal.getReturnDate());
-                  m.put("airline", deal.getAirline());
-                  return m;
-                })
-            .toList();
-
-    batchMessage.put("deals", dealMaps);
-    batchMessage.put("searchTimestamp", searchTimestamp);
-    batchMessage.put("destinationsSearched", destinations.size());
-
-    String messageBody;
-    try {
-      messageBody = objectMapper.writeValueAsString(batchMessage);
-    } catch (JsonProcessingException e) {
-      log.error("Failed to serialize deal batch message", e);
-      return;
+    for (JsonNode flight : response.bestFlights()) {
+      PriceRecordEntity entity = parseFlightNode(flight, route, timestamp, "best");
+      if (entity != null) {
+        entities.add(entity);
+      }
     }
+    for (JsonNode flight : response.otherFlights()) {
+      PriceRecordEntity entity = parseFlightNode(flight, route, timestamp, "other");
+      if (entity != null) {
+        entities.add(entity);
+      }
+    }
+    return entities;
+  }
 
+  PriceRecordEntity parseFlightNode(
+      JsonNode flight, String route, String timestamp, String dealType) {
+    try {
+      int price = flight.path("price").asInt(0);
+      int totalDuration = flight.path("total_duration").asInt(0);
+
+      JsonNode flightsArray = flight.path("flights");
+      if (!flightsArray.isArray() || flightsArray.isEmpty()) {
+        return null;
+      }
+
+      JsonNode firstSegment = flightsArray.get(0);
+      JsonNode lastSegment = flightsArray.get(flightsArray.size() - 1);
+
+      String depAirportId = firstSegment.path("departure_airport").path("id").asText("");
+      String depAirportName = firstSegment.path("departure_airport").path("name").asText("");
+      String depTime = firstSegment.path("departure_airport").path("time").asText("");
+      String arrAirportId = lastSegment.path("arrival_airport").path("id").asText("");
+      String arrAirportName = lastSegment.path("arrival_airport").path("name").asText("");
+      String arrTime = lastSegment.path("arrival_airport").path("time").asText("");
+      String airline = firstSegment.path("airline").asText("");
+      String flightNumber = firstSegment.path("flight_number").asText("");
+      int segments = flightsArray.size();
+
+      Integer carbonEmissionsValue = null;
+      JsonNode carbonNode = flight.path("carbon_emissions").path("this_flight");
+      if (!carbonNode.isMissingNode()) {
+        carbonEmissionsValue = carbonNode.asInt();
+      }
+
+      return PriceRecordEntity.builder()
+          .route(route)
+          .timestamp(timestamp)
+          .price(price)
+          .departureAirportId(depAirportId)
+          .departureAirportName(depAirportName)
+          .departureTime(depTime)
+          .arrivalAirportId(arrAirportId)
+          .arrivalAirportName(arrAirportName)
+          .arrivalTime(arrTime)
+          .airline(airline)
+          .totalDuration(totalDuration)
+          .segments(segments)
+          .flightNumber(flightNumber)
+          .dealType(dealType)
+          .carbonEmissions(carbonEmissionsValue)
+          .outboundDate(outboundDate)
+          .returnDate(returnDate)
+          .build();
+    } catch (Exception e) {
+      log.warn("Failed to parse flight node for route {}: {}", route, e.getMessage());
+      return null;
+    }
+  }
+
+  void publishRawResponse(String rawResponse) {
     PublishRequest request =
-        PublishRequest.builder().topicArn(topicArn).message(messageBody).build();
-
+        PublishRequest.builder().topicArn(topicArn).message(rawResponse).build();
     publishToSnsWithRetry(request);
   }
 

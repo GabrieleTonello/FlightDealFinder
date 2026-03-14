@@ -32,9 +32,8 @@ public class FlightSearchModule extends AbstractModule {
   @Provides
   @Singleton
   FlightApiClient provideFlightApiClient() {
-    String baseUrl = System.getenv("FLIGHT_API_BASE_URL");
     String apiKey = System.getenv("FLIGHT_API_KEY");
-    return new FlightApiClient(HttpClient.newHttpClient(), baseUrl, apiKey, Duration.ofSeconds(30));
+    return new FlightApiClient(HttpClient.newHttpClient(), apiKey, Duration.ofSeconds(30));
   }
 
   @Provides
@@ -77,12 +76,24 @@ public class FlightSearchModule extends AbstractModule {
   }
 
   @Provides
-  @Named("DESTINATIONS")
-  List<String> provideDestinations() {
-    String destinationsEnv = System.getenv("DESTINATIONS");
-    if (destinationsEnv == null || destinationsEnv.isBlank()) {
+  @Named("ROUTES")
+  List<String> provideRoutes() {
+    String routesEnv = System.getenv("ROUTES");
+    if (routesEnv == null || routesEnv.isBlank()) {
       return List.of();
     }
-    return Arrays.asList(destinationsEnv.split(","));
+    return Arrays.asList(routesEnv.split(","));
+  }
+
+  @Provides
+  @Named("OUTBOUND_DATE")
+  String provideOutboundDate() {
+    return System.getenv("OUTBOUND_DATE");
+  }
+
+  @Provides
+  @Named("RETURN_DATE")
+  String provideReturnDate() {
+    return System.getenv("RETURN_DATE");
   }
 }

@@ -11,8 +11,6 @@ import net.jqwik.api.*;
 /**
  * Property 9: For any list of TimeWindows returned by GoogleCalendarClient, each window has
  * startDate <= endDate.
- *
- * <p>Validates: Requirements 7.3
  */
 class CalendarTransformPropertyTest {
 

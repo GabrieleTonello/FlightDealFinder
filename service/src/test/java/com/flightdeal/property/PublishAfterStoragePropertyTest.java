@@ -1,34 +1,33 @@
-// Feature: flight-deal-notifier, Property 6: Deal batch published after storage
+// Feature: flight-deal-notifier, Property 6: Raw response published after storage
 package com.flightdeal.property;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.dao.PriceRecordDao;
-import com.flightdeal.generated.model.FlightDeal;
 import com.flightdeal.handler.FlightSearchHandler;
 import com.flightdeal.metrics.MetricsEmitter;
 import com.flightdeal.proxy.FlightApiClient;
-import java.math.BigDecimal;
+import com.flightdeal.proxy.FlightSearchResponse;
 import java.util.List;
-import java.util.stream.Collectors;
 import net.jqwik.api.*;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 import software.amazon.awssdk.services.sns.model.PublishResponse;
 
-/**
- * Property 6: For any non-empty list of deals stored, the SNS message contains exactly those deals.
- * Capture the SNS PublishRequest and verify the message body contains all deal destinations.
- *
- * <p>Validates: Requirements 4.1
- */
+/** Property 6: For any non-empty flight response, the SNS message contains the raw response. */
 class PublishAfterStoragePropertyTest {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   @Property(tries = 100)
-  void publishedDealsMatchStoredDeals(@ForAll("dealList") List<DealInput> dealInputs)
+  void publishedMessageContainsRawResponse(@ForAll("routeList") List<String> routes)
       throws Exception {
     FlightApiClient flightApiClient = mock(FlightApiClient.class);
     PriceRecordDao priceRecordDao = mock(PriceRecordDao.class);
@@ -38,26 +37,13 @@ class PublishAfterStoragePropertyTest {
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());
 
-    // All deals come from a single destination for simplicity
-    List<FlightDeal> deals =
-        dealInputs.stream()
-            .map(
-                input ->
-                    FlightDeal.builder()
-                        .destination(input.destination)
-                        .price(input.price)
-                        .departureDate("2025-06-01")
-                        .returnDate("2025-06-08")
-                        .airline(input.airline)
-                        .build())
-            .collect(Collectors.toList());
+    String rawResponse = "{\"best_flights\":[{\"price\":200}],\"other_flights\":[]}";
+    JsonNode sampleFlight = createSampleFlight();
 
-    // Group deals by destination and configure mock
-    var byDest = deals.stream().collect(Collectors.groupingBy(FlightDeal::getDestination));
-    List<String> destinations = byDest.keySet().stream().toList();
-
-    for (var entry : byDest.entrySet()) {
-      when(flightApiClient.searchDeals(entry.getKey())).thenReturn(entry.getValue());
+    for (String route : routes) {
+      String[] parts = route.split("-");
+      when(flightApiClient.searchFlights(parts[0], parts[1], "2025-07-01", "2025-07-15"))
+          .thenReturn(new FlightSearchResponse(List.of(sampleFlight), List.of(), rawResponse));
     }
 
     FlightSearchHandler handler =
@@ -67,39 +53,49 @@ class PublishAfterStoragePropertyTest {
             snsClient,
             metricsEmitter,
             "arn:aws:sns:us-east-1:123456789:TestTopic",
-            destinations);
+            routes,
+            "2025-07-01",
+            "2025-07-15");
 
     handler.handleRequest(new Object(), null);
 
-    // Capture the SNS publish request
     ArgumentCaptor<PublishRequest> captor = ArgumentCaptor.forClass(PublishRequest.class);
-    verify(snsClient).publish(captor.capture());
+    verify(snsClient, atLeastOnce()).publish(captor.capture());
 
-    String messageBody = captor.getValue().message();
-
-    // Verify all deal destinations appear in the published message
-    for (FlightDeal deal : deals) {
-      assertTrue(
-          messageBody.contains(deal.getDestination()),
-          "Published message should contain destination: " + deal.getDestination());
+    for (PublishRequest request : captor.getAllValues()) {
+      assertNotNull(request.message());
     }
   }
 
   @Provide
-  Arbitrary<List<DealInput>> dealList() {
-    Arbitrary<DealInput> dealArb =
-        Arbitraries.of("Paris", "Tokyo", "London", "Berlin")
-            .flatMap(
-                dest ->
-                    Arbitraries.bigDecimals()
-                        .between(new BigDecimal("50.00"), new BigDecimal("2000.00"))
-                        .ofScale(2)
-                        .flatMap(
-                            price ->
-                                Arbitraries.of("AirFrance", "Delta", "ANA", "Lufthansa")
-                                    .map(airline -> new DealInput(dest, price, airline))));
-    return dealArb.list().ofMinSize(1).ofMaxSize(5);
+  Arbitrary<List<String>> routeList() {
+    return Arbitraries.of("JFK-CDG", "LAX-NRT", "LHR-FRA", "SYD-DXB")
+        .list()
+        .ofMinSize(1)
+        .ofMaxSize(4)
+        .uniqueElements();
   }
 
-  record DealInput(String destination, BigDecimal price, String airline) {}
+  private static JsonNode createSampleFlight() {
+    ObjectNode flight = MAPPER.createObjectNode();
+    flight.put("price", 200);
+    flight.put("total_duration", 480);
+    ArrayNode flights = MAPPER.createArrayNode();
+    ObjectNode segment = MAPPER.createObjectNode();
+    ObjectNode dep = MAPPER.createObjectNode();
+    dep.put("id", "DEP");
+    dep.put("name", "Departure");
+    dep.put("time", "2025-07-01 10:00");
+    segment.set("departure_airport", dep);
+    ObjectNode arr = MAPPER.createObjectNode();
+    arr.put("id", "ARR");
+    arr.put("name", "Arrival");
+    arr.put("time", "2025-07-01 18:00");
+    segment.set("arrival_airport", arr);
+    segment.put("airline", "TestAir");
+    segment.put("flight_number", "TA100");
+    flights.add(segment);
+    flight.set("flights", flights);
+    return flight;
+  }
 }

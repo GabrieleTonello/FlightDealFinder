@@ -2,22 +2,103 @@ $version: "2"
 
 namespace com.flightdeal.model
 
-/// A single flight deal from the external API
-structure FlightDeal {
+/// An airport with name, IATA code, and time
+structure Airport {
     @required
-    destination: String
+    name: String
 
     @required
-    price: BigDecimal
+    id: String
+
+    time: String
+}
+
+/// A single flight segment within a trip
+structure FlightSegment {
+    @required
+    departureAirport: Airport
 
     @required
-    departureDate: String
+    arrivalAirport: Airport
 
     @required
-    returnDate: String
+    duration: Integer
+
+    airplane: String
 
     @required
     airline: String
+
+    airlineLogo: String
+
+    travelClass: String
+
+    flightNumber: String
+
+    legroom: String
+
+    overnight: Boolean
+
+    oftenDelayed: Boolean
+}
+
+list FlightSegmentList {
+    member: FlightSegment
+}
+
+/// A layover between flight segments
+structure Layover {
+    @required
+    duration: Integer
+
+    @required
+    name: String
+
+    @required
+    id: String
+
+    overnight: Boolean
+}
+
+list LayoverList {
+    member: Layover
+}
+
+/// Carbon emissions data for a flight
+structure CarbonEmissions {
+    thisFlight: Integer
+
+    typicalForRoute: Integer
+
+    differencePercent: Integer
+}
+
+/// A complete flight deal (one or more segments + layovers + price)
+structure FlightDeal {
+    @required
+    flights: FlightSegmentList
+
+    layovers: LayoverList
+
+    @required
+    totalDuration: Integer
+
+    carbonEmissions: CarbonEmissions
+
+    @required
+    price: Integer
+
+    flightType: String
+
+    airlineLogo: String
+
+    departureToken: String
+
+    bookingToken: String
+}
+
+list FlightDealList {
+    member: FlightDeal
 }
 
 /// A time window representing a free period in the user's calendar
@@ -27,6 +108,10 @@ structure TimeWindow {
 
     @required
     endDate: String
+}
+
+list TimeWindowList {
+    member: TimeWindow
 }
 
 /// A date range for calendar queries
@@ -47,16 +132,27 @@ structure PriceRecord {
     timestamp: String
 
     @required
-    price: BigDecimal
+    price: Integer
 
     @required
-    departureDate: String
+    departureAirport: String
 
     @required
-    returnDate: String
+    arrivalAirport: String
+
+    @required
+    departureTime: String
+
+    @required
+    arrivalTime: String
 
     @required
     airline: String
+
+    @required
+    totalDuration: Integer
+
+    flightNumber: String
 
     @required
     retrievalTimestamp: String
@@ -65,21 +161,19 @@ structure PriceRecord {
 /// The message published to SNS Deal Topic
 structure DealBatchMessage {
     @required
-    deals: FlightDealList
+    bestFlights: FlightDealList
+
+    @required
+    otherFlights: FlightDealList
 
     @required
     searchTimestamp: String
 
     @required
-    destinationsSearched: Integer
-}
+    departureId: String
 
-list FlightDealList {
-    member: FlightDeal
-}
-
-list TimeWindowList {
-    member: TimeWindow
+    @required
+    arrivalId: String
 }
 
 /// Error details for a failed destination search
@@ -101,7 +195,10 @@ list SearchErrorList {
 /// Result of the flight search operation
 structure FlightSearchResult {
     @required
-    deals: FlightDealList
+    bestFlights: FlightDealList
+
+    @required
+    otherFlights: FlightDealList
 
     @required
     errors: SearchErrorList

@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,12 +15,11 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
-/** Unit tests for DynamoDbPriceRecordDao. Validates: Requirements 3.1, 3.3, 17.1, 17.5 */
+/** Unit tests for DynamoDbPriceRecordDao with the new PriceRecordEntity schema. */
 @ExtendWith(MockitoExtension.class)
 class DynamoDbPriceRecordDaoTest {
 
   @Mock private DynamoDbEnhancedClient enhancedClient;
-
   @Mock private DynamoDbTable<PriceRecordEntity> table;
 
   private DynamoDbPriceRecordDao dao;
@@ -33,63 +31,56 @@ class DynamoDbPriceRecordDaoTest {
     dao = new DynamoDbPriceRecordDao(enhancedClient);
   }
 
-  private PriceRecordEntity sampleEntity(String destination) {
+  private PriceRecordEntity sampleEntity(String route) {
     return PriceRecordEntity.builder()
-        .destination(destination)
+        .route(route)
         .timestamp("2025-07-01T12:00:00Z")
-        .price(new BigDecimal("299.99"))
-        .departureDate("2025-07-10")
-        .returnDate("2025-07-17")
-        .airline("TestAir")
-        .retrievalTimestamp("2025-07-01T12:00:00Z")
+        .price(299)
+        .departureAirportId("JFK")
+        .departureAirportName("John F. Kennedy")
+        .departureTime("2025-07-01 10:00")
+        .arrivalAirportId("CDG")
+        .arrivalAirportName("Charles de Gaulle")
+        .arrivalTime("2025-07-01 18:00")
+        .airline("AirFrance")
+        .totalDuration(480)
+        .segments(1)
+        .flightNumber("AF001")
+        .dealType("best")
+        .carbonEmissions(150000)
+        .outboundDate("2025-07-01")
+        .returnDate("2025-07-15")
         .build();
   }
 
-  // ---- save calls putItem ----
-
   @Test
   void save_callsPutItem() {
-    PriceRecordEntity entity = sampleEntity("Paris");
-
+    PriceRecordEntity entity = sampleEntity("JFK-CDG");
     dao.save(entity);
-
     verify(table).putItem(entity);
   }
 
-  // ---- save retries on first failure then succeeds ----
-
   @Test
   void save_retriesOnFirstFailureThenSucceeds() {
-    PriceRecordEntity entity = sampleEntity("Tokyo");
-
+    PriceRecordEntity entity = sampleEntity("LAX-NRT");
     doThrow(new RuntimeException("Transient error")).doNothing().when(table).putItem(entity);
-
     dao.save(entity);
-
     verify(table, times(2)).putItem(entity);
   }
 
-  // ---- save fails after 3 retries and logs error ----
-
   @Test
   void save_failsAfterMaxRetriesAndLogsError() {
-    PriceRecordEntity entity = sampleEntity("London");
-
+    PriceRecordEntity entity = sampleEntity("LHR-FRA");
     doThrow(new RuntimeException("Persistent error")).when(table).putItem(entity);
-
-    // Should not throw — logs error and returns after MAX_RETRIES
     dao.save(entity);
-
     verify(table, times(3)).putItem(entity);
   }
 
-  // ---- saveBatch calls save for each entity ----
-
   @Test
   void saveBatch_callsSaveForEachEntity() {
-    PriceRecordEntity entity1 = sampleEntity("Paris");
-    PriceRecordEntity entity2 = sampleEntity("Tokyo");
-    PriceRecordEntity entity3 = sampleEntity("London");
+    PriceRecordEntity entity1 = sampleEntity("JFK-CDG");
+    PriceRecordEntity entity2 = sampleEntity("LAX-NRT");
+    PriceRecordEntity entity3 = sampleEntity("LHR-FRA");
 
     dao.saveBatch(List.of(entity1, entity2, entity3));
 
@@ -98,19 +89,14 @@ class DynamoDbPriceRecordDaoTest {
     verify(table).putItem(entity3);
   }
 
-  // ---- InterruptedException during retry sleep exits gracefully ----
-
   @Test
   void save_interruptedDuringRetrySleep_exitsGracefully() {
-    PriceRecordEntity entity = sampleEntity("Berlin");
-
+    PriceRecordEntity entity = sampleEntity("JFK-CDG");
     doThrow(new RuntimeException("Transient error")).when(table).putItem(entity);
 
-    // Run save in a separate thread so we can interrupt it
     Thread testThread = new Thread(() -> dao.save(entity));
     testThread.start();
 
-    // Give the thread time to enter the first retry sleep, then interrupt
     try {
       Thread.sleep(50);
       testThread.interrupt();
@@ -119,7 +105,6 @@ class DynamoDbPriceRecordDaoTest {
       Thread.currentThread().interrupt();
     }
 
-    // The thread should have exited gracefully (not still running)
     assertFalse(testThread.isAlive(), "Thread should have exited after interruption");
   }
 }

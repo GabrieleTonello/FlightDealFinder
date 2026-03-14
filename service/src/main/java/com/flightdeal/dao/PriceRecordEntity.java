@@ -1,6 +1,5 @@
 package com.flightdeal.dao;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,9 +11,8 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
 /**
- * DynamoDB bean entity for the FlightPriceHistory table. Maps directly to the table schema with
- * destination as partition key and timestamp as sort key. The lastUpdatedAt field is automatically
- * set by the DynamoDB Enhanced Client on every write.
+ * DynamoDB bean entity for the FlightPriceHistory table. Stores flight deal data from the SerpApi
+ * Google Flights API response. Partition key: route (e.g. "JFK-CDG"), Sort key: timestamp.
  */
 @Data
 @Builder
@@ -25,18 +23,63 @@ public class PriceRecordEntity {
 
   public static final String TABLE_NAME = "FlightPriceHistory";
 
-  private String destination;
+  /** Route as "DEPARTURE-ARRIVAL" (e.g. "JFK-CDG") — partition key */
+  private String route;
+
+  /** ISO-8601 timestamp of when this record was stored — sort key */
   private String timestamp;
-  private BigDecimal price;
-  private String departureDate;
-  private String returnDate;
+
+  /** Ticket price in EUR */
+  private Integer price;
+
+  /** Departure airport IATA code */
+  private String departureAirportId;
+
+  /** Departure airport name */
+  private String departureAirportName;
+
+  /** Departure time from the first flight segment */
+  private String departureTime;
+
+  /** Arrival airport IATA code */
+  private String arrivalAirportId;
+
+  /** Arrival airport name */
+  private String arrivalAirportName;
+
+  /** Arrival time from the last flight segment */
+  private String arrivalTime;
+
+  /** Primary airline name */
   private String airline;
-  private String retrievalTimestamp;
+
+  /** Total trip duration in minutes */
+  private Integer totalDuration;
+
+  /** Number of flight segments (1 = direct) */
+  private Integer segments;
+
+  /** Flight number of the first segment */
+  private String flightNumber;
+
+  /** Flight type: "best" or "other" */
+  private String dealType;
+
+  /** Carbon emissions in grams for this flight */
+  private Integer carbonEmissions;
+
+  /** Outbound date searched (YYYY-MM-DD) */
+  private String outboundDate;
+
+  /** Return date searched (YYYY-MM-DD) */
+  private String returnDate;
+
+  /** Auto-generated timestamp on every write */
   private Instant lastUpdatedAt;
 
   @DynamoDbPartitionKey
-  public String getDestination() {
-    return destination;
+  public String getRoute() {
+    return route;
   }
 
   @DynamoDbSortKey

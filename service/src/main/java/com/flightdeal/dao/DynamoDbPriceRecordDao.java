@@ -25,7 +25,8 @@ public class DynamoDbPriceRecordDao implements PriceRecordDao {
   @Inject
   public DynamoDbPriceRecordDao(DynamoDbEnhancedClient enhancedClient) {
     this.table =
-        enhancedClient.table(PriceRecordEntity.TABLE_NAME, TableSchema.fromBean(PriceRecordEntity.class));
+        enhancedClient.table(
+            PriceRecordEntity.TABLE_NAME, TableSchema.fromBean(PriceRecordEntity.class));
   }
 
   @Override
@@ -51,7 +52,7 @@ public class DynamoDbPriceRecordDao implements PriceRecordDao {
         if (attempt >= MAX_RETRIES) {
           log.error(
               "DynamoDB write for {} failed after {} attempts: {}",
-              entity.getDestination(),
+              entity.getRoute(),
               MAX_RETRIES,
               e.getMessage(),
               e);
@@ -60,7 +61,7 @@ public class DynamoDbPriceRecordDao implements PriceRecordDao {
         long delay = BASE_DELAY_MS * (1L << (attempt - 1));
         log.warn(
             "DynamoDB write for {} attempt {} failed, retrying in {}ms: {}",
-            entity.getDestination(),
+            entity.getRoute(),
             attempt,
             delay,
             e.getMessage());
@@ -68,7 +69,7 @@ public class DynamoDbPriceRecordDao implements PriceRecordDao {
           Thread.sleep(delay);
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
-          log.error("DynamoDB write retry interrupted for {}", entity.getDestination(), ie);
+          log.error("DynamoDB write retry interrupted for {}", entity.getRoute(), ie);
           return;
         }
       }

@@ -1,6 +1,6 @@
 package com.flightdeal.service;
 
-import com.flightdeal.generated.model.FlightDeal;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.flightdeal.generated.model.TimeWindow;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -9,11 +9,11 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Compares flight deals against free calendar windows and returns matching deals sorted by price
- * ascending.
+ * Compares flight deals (as JsonNode objects from SerpApi) against free calendar windows and
+ * returns matching deals sorted by price ascending.
  *
- * <p>A deal matches a window when the deal's departure date is on or after the window start date
- * AND the deal's return date is on or before the window end date (ISO-8601 string comparison).
+ * <p>A deal matches a window when the first segment's departure time date is on or after the window
+ * start date AND the last segment's arrival time date is on or before the window end date.
  */
 @Slf4j
 @Singleton
@@ -23,49 +23,83 @@ public class FlightMatcher {
   public FlightMatcher() {}
 
   /**
-   * Matches flight deals against free calendar windows.
+   * Matches flight deal JsonNodes against free calendar windows.
    *
-   * @param deals the available flight deals
+   * @param flights the available flight deal JsonNodes from SerpApi
    * @param freeWindows the user's free calendar windows
-   * @return matched deals sorted by price ascending, or empty list if none match
+   * @return matched flights sorted by price ascending, or empty list if none match
    */
-  public List<FlightDeal> matchDeals(List<FlightDeal> deals, List<TimeWindow> freeWindows) {
-    if (deals == null || deals.isEmpty() || freeWindows == null || freeWindows.isEmpty()) {
+  public List<JsonNode> matchDeals(List<JsonNode> flights, List<TimeWindow> freeWindows) {
+    if (flights == null || flights.isEmpty() || freeWindows == null || freeWindows.isEmpty()) {
       log.info(
-          "No matches possible: deals={}, freeWindows={}",
-          deals == null ? 0 : deals.size(),
+          "No matches possible: flights={}, freeWindows={}",
+          flights == null ? 0 : flights.size(),
           freeWindows == null ? 0 : freeWindows.size());
       return List.of();
     }
 
-    List<FlightDeal> matched =
-        deals.stream()
-            .filter(deal -> fitsAnyWindow(deal, freeWindows))
-            .sorted(Comparator.comparing(FlightDeal::getPrice))
+    List<JsonNode> matched =
+        flights.stream()
+            .filter(flight -> fitsAnyWindow(flight, freeWindows))
+            .sorted(Comparator.comparingInt(f -> f.path("price").asInt(Integer.MAX_VALUE)))
             .toList();
 
     if (matched.isEmpty()) {
       log.info(
-          "No deals match any free calendar window out of {} deals and {} windows",
-          deals.size(),
+          "No flights match any free calendar window out of {} flights and {} windows",
+          flights.size(),
           freeWindows.size());
     } else {
       log.info(
-          "Matched {} deals out of {} against {} free windows",
+          "Matched {} flights out of {} against {} free windows",
           matched.size(),
-          deals.size(),
+          flights.size(),
           freeWindows.size());
     }
 
     return matched;
   }
 
-  private boolean fitsAnyWindow(FlightDeal deal, List<TimeWindow> windows) {
-    return windows.stream().anyMatch(window -> fitsWindow(deal, window));
+  private boolean fitsAnyWindow(JsonNode flight, List<TimeWindow> windows) {
+    return windows.stream().anyMatch(window -> fitsWindow(flight, window));
   }
 
-  private boolean fitsWindow(FlightDeal deal, TimeWindow window) {
-    return deal.getDepartureDate().compareTo(window.getStartDate()) >= 0
-        && deal.getReturnDate().compareTo(window.getEndDate()) <= 0;
+  private boolean fitsWindow(JsonNode flight, TimeWindow window) {
+    String departureDate = extractDepartureDate(flight);
+    String arrivalDate = extractArrivalDate(flight);
+
+    if (departureDate == null || arrivalDate == null) {
+      return false;
+    }
+
+    return departureDate.compareTo(window.getStartDate()) >= 0
+        && arrivalDate.compareTo(window.getEndDate()) <= 0;
+  }
+
+  private String extractDepartureDate(JsonNode flight) {
+    JsonNode flightsArray = flight.path("flights");
+    if (!flightsArray.isArray() || flightsArray.isEmpty()) {
+      return null;
+    }
+    String time = flightsArray.get(0).path("departure_airport").path("time").asText(null);
+    return extractDatePart(time);
+  }
+
+  private String extractArrivalDate(JsonNode flight) {
+    JsonNode flightsArray = flight.path("flights");
+    if (!flightsArray.isArray() || flightsArray.isEmpty()) {
+      return null;
+    }
+    String time =
+        flightsArray.get(flightsArray.size() - 1).path("arrival_airport").path("time").asText(null);
+    return extractDatePart(time);
+  }
+
+  /** Extracts the date part (YYYY-MM-DD) from a datetime string like "2025-07-05 10:30". */
+  private String extractDatePart(String dateTime) {
+    if (dateTime == null || dateTime.length() < 10) {
+      return null;
+    }
+    return dateTime.substring(0, 10);
   }
 }

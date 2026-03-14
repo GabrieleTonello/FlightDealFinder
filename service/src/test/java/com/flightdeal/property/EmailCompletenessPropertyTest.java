@@ -5,10 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.flightdeal.generated.model.FlightDeal;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.service.NotificationService;
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.jqwik.api.*;
@@ -18,15 +19,15 @@ import software.amazon.awssdk.services.ses.model.SendEmailRequest;
 import software.amazon.awssdk.services.ses.model.SendEmailResponse;
 
 /**
- * Property 12: For any non-empty list of matched deals, the email body contains destination, price,
- * departureDate, returnDate, airline for every deal.
- *
- * <p>Validates: Requirements 9.1, 9.2
+ * Property 12: For any non-empty list of matched flights, the email body contains price, airline,
+ * airports for every flight.
  */
 class EmailCompletenessPropertyTest {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   @Property(tries = 100)
-  void emailBodyContainsAllDealFields(@ForAll("dealList") List<DealInput> dealInputs) {
+  void emailBodyContainsAllFlightFields(@ForAll("flightList") List<FlightInput> flightInputs) {
     SesClient sesClient = mock(SesClient.class);
     when(sesClient.sendEmail(any(SendEmailRequest.class)))
         .thenReturn(SendEmailResponse.builder().messageId("test-msg-id").build());
@@ -34,93 +35,76 @@ class EmailCompletenessPropertyTest {
     NotificationService service =
         new NotificationService(sesClient, "sender@test.com", "recipient@test.com");
 
-    List<FlightDeal> deals =
-        dealInputs.stream()
-            .map(
-                input ->
-                    FlightDeal.builder()
-                        .destination(input.destination)
-                        .price(input.price)
-                        .departureDate(input.departureDate)
-                        .returnDate(input.returnDate)
-                        .airline(input.airline)
-                        .build())
+    List<JsonNode> flights =
+        flightInputs.stream()
+            .map(input -> createFlight(input.price, input.airline, input.depName, input.arrName))
             .collect(Collectors.toList());
 
-    service.sendDealNotification(deals);
+    service.sendDealNotification(flights);
 
-    // Capture the SES request to inspect the email body
     ArgumentCaptor<SendEmailRequest> captor = ArgumentCaptor.forClass(SendEmailRequest.class);
     verify(sesClient).sendEmail(captor.capture());
 
     String emailBody = captor.getValue().message().body().text().data();
 
-    for (FlightDeal deal : deals) {
+    for (FlightInput input : flightInputs) {
       assertTrue(
-          emailBody.contains(deal.getDestination()),
-          "Email should contain destination: " + deal.getDestination());
+          emailBody.contains(String.valueOf(input.price)),
+          "Email should contain price: " + input.price);
       assertTrue(
-          emailBody.contains(deal.getPrice().toString()),
-          "Email should contain price: " + deal.getPrice());
+          emailBody.contains(input.airline), "Email should contain airline: " + input.airline);
       assertTrue(
-          emailBody.contains(deal.getDepartureDate()),
-          "Email should contain departureDate: " + deal.getDepartureDate());
+          emailBody.contains(input.depName),
+          "Email should contain departure airport: " + input.depName);
       assertTrue(
-          emailBody.contains(deal.getReturnDate()),
-          "Email should contain returnDate: " + deal.getReturnDate());
-      assertTrue(
-          emailBody.contains(deal.getAirline()),
-          "Email should contain airline: " + deal.getAirline());
+          emailBody.contains(input.arrName),
+          "Email should contain arrival airport: " + input.arrName);
     }
   }
 
   @Provide
-  Arbitrary<List<DealInput>> dealList() {
-    Arbitrary<DealInput> dealArb =
-        Arbitraries.of("Paris", "Tokyo", "London", "Berlin", "Sydney", "Rome")
+  Arbitrary<List<FlightInput>> flightList() {
+    Arbitrary<FlightInput> flightArb =
+        Arbitraries.integers()
+            .between(50, 2000)
             .flatMap(
-                dest ->
-                    Arbitraries.bigDecimals()
-                        .between(new BigDecimal("50.00"), new BigDecimal("2000.00"))
-                        .ofScale(2)
+                price ->
+                    Arbitraries.of("AirFrance", "Delta", "ANA", "Lufthansa", "BA", "JAL")
                         .flatMap(
-                            price ->
-                                Arbitraries.integers()
-                                    .between(0, 179)
+                            airline ->
+                                Arbitraries.of("JFK Airport", "LAX Airport", "LHR Airport")
                                     .flatMap(
-                                        depOffset ->
-                                            Arbitraries.integers()
-                                                .between(3, 21)
-                                                .flatMap(
-                                                    tripLen ->
-                                                        Arbitraries.of(
-                                                                "AirFrance",
-                                                                "Delta",
-                                                                "ANA",
-                                                                "Lufthansa",
-                                                                "BA",
-                                                                "JAL")
-                                                            .map(
-                                                                airline -> {
-                                                                  LocalDate dep =
-                                                                      LocalDate.of(2025, 1, 1)
-                                                                          .plusDays(depOffset);
-                                                                  LocalDate ret =
-                                                                      dep.plusDays(tripLen);
-                                                                  return new DealInput(
-                                                                      dest,
-                                                                      price,
-                                                                      dep.toString(),
-                                                                      ret.toString(),
-                                                                      airline);
-                                                                })))));
-    return dealArb.list().ofMinSize(1).ofMaxSize(5);
+                                        depName ->
+                                            Arbitraries.of(
+                                                    "CDG Airport", "NRT Airport", "FRA Airport")
+                                                .map(
+                                                    arrName ->
+                                                        new FlightInput(
+                                                            price, airline, depName, arrName)))));
+    return flightArb.list().ofMinSize(1).ofMaxSize(5);
   }
 
-  record DealInput(
-      String destination,
-      BigDecimal price,
-      String departureDate,
-      String returnDate,
-      String airline) {}
+  record FlightInput(int price, String airline, String depName, String arrName) {}
+
+  private static JsonNode createFlight(int price, String airline, String depName, String arrName) {
+    ObjectNode flight = MAPPER.createObjectNode();
+    flight.put("price", price);
+    flight.put("total_duration", 480);
+    ArrayNode flights = MAPPER.createArrayNode();
+    ObjectNode segment = MAPPER.createObjectNode();
+    ObjectNode dep = MAPPER.createObjectNode();
+    dep.put("id", "DEP");
+    dep.put("name", depName);
+    dep.put("time", "2025-07-01 10:00");
+    segment.set("departure_airport", dep);
+    ObjectNode arr = MAPPER.createObjectNode();
+    arr.put("id", "ARR");
+    arr.put("name", arrName);
+    arr.put("time", "2025-07-01 18:00");
+    segment.set("arrival_airport", arr);
+    segment.put("airline", airline);
+    flights.add(segment);
+    flight.set("flights", flights);
+    return flight;
+  }
 }

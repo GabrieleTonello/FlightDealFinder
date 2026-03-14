@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.flightdeal.generated.model.FlightDeal;
-import java.math.BigDecimal;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,139 +20,201 @@ import software.amazon.awssdk.services.ses.model.SendEmailRequest;
 import software.amazon.awssdk.services.ses.model.SendEmailResponse;
 import software.amazon.awssdk.services.ses.model.SesException;
 
-/** Unit tests for NotificationService. Validates: Requirements 9.1, 9.2, 9.3, 17.1, 17.5 */
+/** Unit tests for NotificationService with JsonNode-based flights. */
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final String SENDER = "sender@example.com";
+  private static final String RECIPIENT = "recipient@example.com";
 
   @Mock private SesClient sesClient;
 
   private NotificationService notificationService;
-
-  private static final String SENDER = "sender@example.com";
-  private static final String RECIPIENT = "recipient@example.com";
 
   @BeforeEach
   void setUp() {
     notificationService = new NotificationService(sesClient, SENDER, RECIPIENT);
   }
 
-  private FlightDeal deal(
-      String destination, String price, String dep, String ret, String airline) {
-    return FlightDeal.builder()
-        .destination(destination)
-        .price(new BigDecimal(price))
-        .departureDate(dep)
-        .returnDate(ret)
-        .airline(airline)
-        .build();
-  }
+  static JsonNode flight(
+      int price,
+      String airline,
+      String depId,
+      String depName,
+      String depTime,
+      String arrId,
+      String arrName,
+      String arrTime,
+      int totalDuration) {
+    ObjectNode node = MAPPER.createObjectNode();
+    node.put("price", price);
+    node.put("total_duration", totalDuration);
 
-  // ---- Successful email send returns messageId ----
+    ArrayNode flights = MAPPER.createArrayNode();
+    ObjectNode segment = MAPPER.createObjectNode();
+
+    ObjectNode depAirport = MAPPER.createObjectNode();
+    depAirport.put("id", depId);
+    depAirport.put("name", depName);
+    depAirport.put("time", depTime);
+    segment.set("departure_airport", depAirport);
+
+    ObjectNode arrAirport = MAPPER.createObjectNode();
+    arrAirport.put("id", arrId);
+    arrAirport.put("name", arrName);
+    arrAirport.put("time", arrTime);
+    segment.set("arrival_airport", arrAirport);
+
+    segment.put("airline", airline);
+    flights.add(segment);
+    node.set("flights", flights);
+    return node;
+  }
 
   @Test
   void sendDealNotification_success_returnsMessageId() {
-    List<FlightDeal> deals =
-        List.of(deal("Paris", "299.99", "2025-07-01", "2025-07-10", "AirFrance"));
+    List<JsonNode> flights =
+        List.of(
+            flight(
+                299,
+                "AirFrance",
+                "JFK",
+                "JFK Airport",
+                "2025-07-01 10:00",
+                "CDG",
+                "CDG Airport",
+                "2025-07-01 18:00",
+                480));
 
     when(sesClient.sendEmail(any(SendEmailRequest.class)))
         .thenReturn(SendEmailResponse.builder().messageId("msg-123").build());
 
-    String messageId = notificationService.sendDealNotification(deals);
+    String messageId = notificationService.sendDealNotification(flights);
 
     assertEquals("msg-123", messageId);
-    verify(sesClient).sendEmail(any(SendEmailRequest.class));
   }
 
-  // ---- Email body contains all deal fields ----
-
   @Test
-  void sendDealNotification_emailBodyContainsAllDealFields() {
-    FlightDeal deal = deal("Tokyo", "499.50", "2025-08-01", "2025-08-10", "JAL");
-    List<FlightDeal> deals = List.of(deal);
+  void sendDealNotification_emailBodyContainsAllFields() {
+    JsonNode deal =
+        flight(
+            499,
+            "JAL",
+            "LAX",
+            "Los Angeles",
+            "2025-08-01 09:00",
+            "NRT",
+            "Narita",
+            "2025-08-02 14:00",
+            660);
 
     when(sesClient.sendEmail(any(SendEmailRequest.class)))
         .thenReturn(SendEmailResponse.builder().messageId("msg-456").build());
 
-    notificationService.sendDealNotification(deals);
+    notificationService.sendDealNotification(List.of(deal));
 
     ArgumentCaptor<SendEmailRequest> captor = ArgumentCaptor.forClass(SendEmailRequest.class);
     verify(sesClient).sendEmail(captor.capture());
 
     String body = captor.getValue().message().body().text().data();
-    assertTrue(body.contains("Tokyo"), "Body should contain destination");
-    assertTrue(body.contains("499.50"), "Body should contain price");
-    assertTrue(body.contains("2025-08-01"), "Body should contain departure date");
-    assertTrue(body.contains("2025-08-10"), "Body should contain return date");
+    assertTrue(body.contains("499"), "Body should contain price");
     assertTrue(body.contains("JAL"), "Body should contain airline");
+    assertTrue(body.contains("Los Angeles"), "Body should contain departure airport");
+    assertTrue(body.contains("LAX"), "Body should contain departure airport id");
+    assertTrue(body.contains("Narita"), "Body should contain arrival airport");
+    assertTrue(body.contains("NRT"), "Body should contain arrival airport id");
+    assertTrue(body.contains("660"), "Body should contain duration");
   }
-
-  // ---- Multiple deals formatted correctly ----
 
   @Test
   void sendDealNotification_multipleDeals_allFormattedInBody() {
-    List<FlightDeal> deals =
+    List<JsonNode> flights =
         List.of(
-            deal("Paris", "299.99", "2025-07-01", "2025-07-10", "AirFrance"),
-            deal("Tokyo", "599.00", "2025-08-05", "2025-08-15", "ANA"));
+            flight(
+                299,
+                "AirFrance",
+                "JFK",
+                "JFK Airport",
+                "2025-07-01 10:00",
+                "CDG",
+                "CDG Airport",
+                "2025-07-01 18:00",
+                480),
+            flight(
+                599,
+                "ANA",
+                "LAX",
+                "LAX Airport",
+                "2025-08-05 11:00",
+                "NRT",
+                "NRT Airport",
+                "2025-08-06 15:00",
+                720));
 
     when(sesClient.sendEmail(any(SendEmailRequest.class)))
         .thenReturn(SendEmailResponse.builder().messageId("msg-789").build());
 
-    notificationService.sendDealNotification(deals);
+    notificationService.sendDealNotification(flights);
 
     ArgumentCaptor<SendEmailRequest> captor = ArgumentCaptor.forClass(SendEmailRequest.class);
     verify(sesClient).sendEmail(captor.capture());
 
     String body = captor.getValue().message().body().text().data();
-
-    // First deal fields
-    assertTrue(body.contains("Paris"), "Body should contain first deal destination");
-    assertTrue(body.contains("299.99"), "Body should contain first deal price");
-    assertTrue(body.contains("2025-07-01"), "Body should contain first deal departure");
-    assertTrue(body.contains("2025-07-10"), "Body should contain first deal return");
-    assertTrue(body.contains("AirFrance"), "Body should contain first deal airline");
-
-    // Second deal fields
-    assertTrue(body.contains("Tokyo"), "Body should contain second deal destination");
-    assertTrue(body.contains("599.00"), "Body should contain second deal price");
-    assertTrue(body.contains("2025-08-05"), "Body should contain second deal departure");
-    assertTrue(body.contains("2025-08-15"), "Body should contain second deal return");
-    assertTrue(body.contains("ANA"), "Body should contain second deal airline");
-
-    // Both deals numbered
-    assertTrue(body.contains("Deal 1:"), "Body should contain Deal 1 label");
-    assertTrue(body.contains("Deal 2:"), "Body should contain Deal 2 label");
+    assertTrue(body.contains("AirFrance"));
+    assertTrue(body.contains("ANA"));
+    assertTrue(body.contains("299"));
+    assertTrue(body.contains("599"));
+    assertTrue(body.contains("Deal 1:"));
+    assertTrue(body.contains("Deal 2:"));
   }
-
-  // ---- SES throws exception wrapped as RuntimeException ----
 
   @Test
   void sendDealNotification_sesThrowsException_wrappedAsRuntimeException() {
-    List<FlightDeal> deals =
-        List.of(deal("Berlin", "199.99", "2025-09-01", "2025-09-10", "Lufthansa"));
+    List<JsonNode> flights =
+        List.of(
+            flight(
+                199,
+                "Lufthansa",
+                "JFK",
+                "JFK Airport",
+                "2025-09-01 10:00",
+                "FRA",
+                "Frankfurt",
+                "2025-09-01 22:00",
+                480));
 
     SesException sesException =
         (SesException) SesException.builder().message("Service unavailable").build();
     when(sesClient.sendEmail(any(SendEmailRequest.class))).thenThrow(sesException);
 
     RuntimeException thrown =
-        assertThrows(RuntimeException.class, () -> notificationService.sendDealNotification(deals));
+        assertThrows(
+            RuntimeException.class, () -> notificationService.sendDealNotification(flights));
 
     assertTrue(thrown.getMessage().contains("Failed to send notification email"));
     assertSame(sesException, thrown.getCause());
   }
 
-  // ---- Subject line singular deal count ----
-
   @Test
   void sendDealNotification_singleDeal_subjectLineSingular() {
-    List<FlightDeal> deals =
-        List.of(deal("Rome", "350.00", "2025-10-01", "2025-10-08", "Alitalia"));
+    List<JsonNode> flights =
+        List.of(
+            flight(
+                350,
+                "Alitalia",
+                "JFK",
+                "JFK Airport",
+                "2025-10-01 10:00",
+                "FCO",
+                "Fiumicino",
+                "2025-10-01 22:00",
+                600));
 
     when(sesClient.sendEmail(any(SendEmailRequest.class)))
         .thenReturn(SendEmailResponse.builder().messageId("msg-single").build());
 
-    notificationService.sendDealNotification(deals);
+    notificationService.sendDealNotification(flights);
 
     ArgumentCaptor<SendEmailRequest> captor = ArgumentCaptor.forClass(SendEmailRequest.class);
     verify(sesClient).sendEmail(captor.capture());
@@ -159,20 +223,37 @@ class NotificationServiceTest {
     assertEquals("Flight Deal Alert: 1 matching deal found!", subject);
   }
 
-  // ---- Subject line plural deal count ----
-
   @Test
   void sendDealNotification_multipleDeals_subjectLinePlural() {
-    List<FlightDeal> deals =
+    List<JsonNode> flights =
         List.of(
-            deal("Paris", "299.99", "2025-07-01", "2025-07-10", "AirFrance"),
-            deal("Tokyo", "599.00", "2025-08-05", "2025-08-15", "ANA"),
-            deal("London", "450.00", "2025-09-01", "2025-09-07", "BA"));
+            flight(
+                299, "AF", "JFK", "JFK", "2025-07-01 10:00", "CDG", "CDG", "2025-07-01 18:00", 480),
+            flight(
+                599,
+                "ANA",
+                "LAX",
+                "LAX",
+                "2025-08-05 11:00",
+                "NRT",
+                "NRT",
+                "2025-08-06 15:00",
+                720),
+            flight(
+                450,
+                "BA",
+                "LHR",
+                "LHR",
+                "2025-09-01 08:00",
+                "JFK",
+                "JFK",
+                "2025-09-01 16:00",
+                480));
 
     when(sesClient.sendEmail(any(SendEmailRequest.class)))
         .thenReturn(SendEmailResponse.builder().messageId("msg-plural").build());
 
-    notificationService.sendDealNotification(deals);
+    notificationService.sendDealNotification(flights);
 
     ArgumentCaptor<SendEmailRequest> captor = ArgumentCaptor.forClass(SendEmailRequest.class);
     verify(sesClient).sendEmail(captor.capture());
@@ -181,34 +262,25 @@ class NotificationServiceTest {
     assertEquals("Flight Deal Alert: 3 matching deals found!", subject);
   }
 
-  // ---- formatEmailBody directly testable ----
-
-  @Test
-  void formatEmailBody_containsAllFieldsForEachDeal() {
-    List<FlightDeal> deals =
-        List.of(deal("Sydney", "899.00", "2025-12-20", "2025-12-30", "Qantas"));
-
-    String body = notificationService.formatEmailBody(deals);
-
-    assertTrue(body.contains("Destination: Sydney"));
-    assertTrue(body.contains("$899.00"));
-    assertTrue(body.contains("Departure: 2025-12-20"));
-    assertTrue(body.contains("Return: 2025-12-30"));
-    assertTrue(body.contains("Airline: Qantas"));
-    assertTrue(body.contains("Happy travels!"));
-  }
-
-  // ---- Email request uses correct sender and recipient ----
-
   @Test
   void sendDealNotification_usesCorrectSenderAndRecipient() {
-    List<FlightDeal> deals =
-        List.of(deal("Madrid", "275.00", "2025-06-15", "2025-06-22", "Iberia"));
+    List<JsonNode> flights =
+        List.of(
+            flight(
+                275,
+                "Iberia",
+                "JFK",
+                "JFK",
+                "2025-06-15 10:00",
+                "MAD",
+                "Madrid",
+                "2025-06-15 22:00",
+                480));
 
     when(sesClient.sendEmail(any(SendEmailRequest.class)))
         .thenReturn(SendEmailResponse.builder().messageId("msg-addr").build());
 
-    notificationService.sendDealNotification(deals);
+    notificationService.sendDealNotification(flights);
 
     ArgumentCaptor<SendEmailRequest> captor = ArgumentCaptor.forClass(SendEmailRequest.class);
     verify(sesClient).sendEmail(captor.capture());

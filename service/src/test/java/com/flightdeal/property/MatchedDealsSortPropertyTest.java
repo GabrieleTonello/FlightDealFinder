@@ -3,61 +3,65 @@ package com.flightdeal.property;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.flightdeal.generated.model.FlightDeal;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.generated.model.TimeWindow;
 import com.flightdeal.service.FlightMatcher;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.jqwik.api.*;
 
 /**
- * Property 11: For any list of matched deals, they are sorted by price in non-decreasing order.
- *
- * <p>Validates: Requirements 8.3
+ * Property 11: For any list of matched flights, they are sorted by price in non-decreasing order.
  */
 class MatchedDealsSortPropertyTest {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private final FlightMatcher flightMatcher = new FlightMatcher();
 
   @Property(tries = 100)
-  void matchedDealsAreSortedByPriceAscending(@ForAll("dealPrices") List<BigDecimal> prices) {
+  void matchedFlightsAreSortedByPriceAscending(@ForAll("flightPrices") List<Integer> prices) {
 
-    // Create a wide window that all deals fit within
     TimeWindow window = TimeWindow.builder().startDate("2025-01-01").endDate("2025-12-31").build();
 
-    List<FlightDeal> deals =
-        prices.stream()
-            .map(
-                price ->
-                    FlightDeal.builder()
-                        .destination("TestDest")
-                        .price(price)
-                        .departureDate("2025-06-01")
-                        .returnDate("2025-06-08")
-                        .airline("TestAir")
-                        .build())
-            .collect(Collectors.toList());
+    List<JsonNode> flights = prices.stream().map(this::createFlight).collect(Collectors.toList());
 
-    List<FlightDeal> matched = flightMatcher.matchDeals(deals, List.of(window));
+    List<JsonNode> matched = flightMatcher.matchDeals(flights, List.of(window));
 
-    // Verify non-decreasing price order
     for (int i = 1; i < matched.size(); i++) {
-      BigDecimal prev = matched.get(i - 1).getPrice();
-      BigDecimal curr = matched.get(i).getPrice();
+      int prev = matched.get(i - 1).path("price").asInt();
+      int curr = matched.get(i).path("price").asInt();
       assertTrue(
-          prev.compareTo(curr) <= 0,
-          "Deals should be sorted by price ascending: " + prev + " <= " + curr);
+          prev <= curr, "Flights should be sorted by price ascending: " + prev + " <= " + curr);
     }
   }
 
   @Provide
-  Arbitrary<List<BigDecimal>> dealPrices() {
-    return Arbitraries.bigDecimals()
-        .between(new BigDecimal("50.00"), new BigDecimal("2000.00"))
-        .ofScale(2)
-        .list()
-        .ofMinSize(1)
-        .ofMaxSize(15);
+  Arbitrary<List<Integer>> flightPrices() {
+    return Arbitraries.integers().between(50, 2000).list().ofMinSize(1).ofMaxSize(15);
+  }
+
+  private JsonNode createFlight(int price) {
+    ObjectNode flight = MAPPER.createObjectNode();
+    flight.put("price", price);
+    flight.put("total_duration", 480);
+    ArrayNode flights = MAPPER.createArrayNode();
+    ObjectNode segment = MAPPER.createObjectNode();
+    ObjectNode dep = MAPPER.createObjectNode();
+    dep.put("id", "JFK");
+    dep.put("name", "JFK Airport");
+    dep.put("time", "2025-06-01 10:00");
+    segment.set("departure_airport", dep);
+    ObjectNode arr = MAPPER.createObjectNode();
+    arr.put("id", "CDG");
+    arr.put("name", "CDG Airport");
+    arr.put("time", "2025-06-08 18:00");
+    segment.set("arrival_airport", arr);
+    segment.put("airline", "TestAir");
+    flights.add(segment);
+    flight.set("flights", flights);
+    return flight;
   }
 }

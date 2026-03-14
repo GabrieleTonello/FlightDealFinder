@@ -1,6 +1,6 @@
 package com.flightdeal.service;
 
-import com.flightdeal.generated.model.FlightDeal;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
@@ -17,9 +17,9 @@ import software.amazon.awssdk.services.ses.model.SendEmailResponse;
 /**
  * Sends email notifications for matched flight deals via Amazon SES.
  *
- * <p>Formats an email body containing destination, price, departure date, return date, and airline
- * for each matched deal, then sends it to the configured recipient. Throws RuntimeException on
- * failure so that Step Functions retry policies can handle transient errors.
+ * <p>Formats an email body containing price, airline, airports, times, and duration for each
+ * matched deal (JsonNode from SerpApi), then sends it to the configured recipient. Throws
+ * RuntimeException on failure so that Step Functions retry policies can handle transient errors.
  */
 @Slf4j
 @Singleton
@@ -42,21 +42,21 @@ public class NotificationService {
   /**
    * Sends an email notification with the matched flight deals.
    *
-   * @param matchedDeals the list of matched flight deals to include in the email
+   * @param matchedFlights the list of matched flight deal JsonNodes to include in the email
    * @return the SES message ID
    * @throws RuntimeException if the email fails to send
    */
-  public String sendDealNotification(List<FlightDeal> matchedDeals) {
+  public String sendDealNotification(List<JsonNode> matchedFlights) {
     log.info(
-        "Sending deal notification with {} matched deals to {}",
-        matchedDeals.size(),
+        "Sending deal notification with {} matched flights to {}",
+        matchedFlights.size(),
         recipientEmail);
 
     String subject =
         String.format(
             "Flight Deal Alert: %d matching deal%s found!",
-            matchedDeals.size(), matchedDeals.size() == 1 ? "" : "s");
-    String emailBody = formatEmailBody(matchedDeals);
+            matchedFlights.size(), matchedFlights.size() == 1 ? "" : "s");
+    String emailBody = formatEmailBody(matchedFlights);
 
     try {
       SendEmailRequest request =
@@ -83,18 +83,46 @@ public class NotificationService {
     }
   }
 
-  String formatEmailBody(List<FlightDeal> deals) {
+  String formatEmailBody(List<JsonNode> flights) {
     var sb = new StringBuilder();
     sb.append("Great news! We found flight deals that match your calendar availability.\n\n");
 
-    for (int i = 0; i < deals.size(); i++) {
-      FlightDeal deal = deals.get(i);
+    for (int i = 0; i < flights.size(); i++) {
+      JsonNode flight = flights.get(i);
+      int price = flight.path("price").asInt(0);
+      int totalDuration = flight.path("total_duration").asInt(0);
+
+      JsonNode flightsArray = flight.path("flights");
+      String airline = "";
+      String depAirport = "";
+      String depTime = "";
+      String arrAirport = "";
+      String arrTime = "";
+
+      if (flightsArray.isArray() && !flightsArray.isEmpty()) {
+        JsonNode firstSeg = flightsArray.get(0);
+        JsonNode lastSeg = flightsArray.get(flightsArray.size() - 1);
+        airline = firstSeg.path("airline").asText("");
+        depAirport =
+            firstSeg.path("departure_airport").path("name").asText("")
+                + " ("
+                + firstSeg.path("departure_airport").path("id").asText("")
+                + ")";
+        depTime = firstSeg.path("departure_airport").path("time").asText("");
+        arrAirport =
+            lastSeg.path("arrival_airport").path("name").asText("")
+                + " ("
+                + lastSeg.path("arrival_airport").path("id").asText("")
+                + ")";
+        arrTime = lastSeg.path("arrival_airport").path("time").asText("");
+      }
+
       sb.append(String.format("Deal %d:\n", i + 1));
-      sb.append(String.format("  Destination: %s\n", deal.getDestination()));
-      sb.append(String.format("  Price: $%s\n", deal.getPrice()));
-      sb.append(String.format("  Departure: %s\n", deal.getDepartureDate()));
-      sb.append(String.format("  Return: %s\n", deal.getReturnDate()));
-      sb.append(String.format("  Airline: %s\n", deal.getAirline()));
+      sb.append(String.format("  Price: %d EUR\n", price));
+      sb.append(String.format("  Airline: %s\n", airline));
+      sb.append(String.format("  From: %s at %s\n", depAirport, depTime));
+      sb.append(String.format("  To: %s at %s\n", arrAirport, arrTime));
+      sb.append(String.format("  Duration: %d min\n", totalDuration));
       sb.append("\n");
     }
 

@@ -34,3 +34,4 @@ service/build/
 
 # Kiro powers
 .kiro/powers
+scripts/test.json

@@ -57,7 +57,7 @@ export class FlightDealNotifierStack extends Stack {
     // 5. Placeholder Lambdas for Step Functions workflow tasks
     //    These point to the same service JAR but with different handler classes.
     //    They will be replaced with dedicated handlers as the service code evolves.
-    const codePath = lambda.Code.fromAsset('../service/build/libs/flight-deal-notifier-service-1.0.0.jar');
+    const codePath = lambda.Code.fromAsset('../service/build/lambda/lambda.jar');
 
     const calendarLambda = new lambda.Function(this, 'CalendarServiceLambda', {
       functionName: `CalendarServiceLambda-${props.stage}`,

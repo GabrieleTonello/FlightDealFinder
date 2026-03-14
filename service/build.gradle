@@ -213,5 +213,13 @@ shadowJar {
     mergeServiceFiles()
 }
 
+// Copy the shadow JAR to a clean directory for CDK deployment
+task lambdaPackage(type: Copy) {
+    dependsOn shadowJar
+    from shadowJar.archiveFile
+    into "${buildDir}/lambda"
+    rename { 'lambda.jar' }
+}
+
 // Build produces the fat JAR
-build.dependsOn shadowJar
+build.dependsOn lambdaPackage

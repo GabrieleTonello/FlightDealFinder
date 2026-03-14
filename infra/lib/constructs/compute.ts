@@ -18,6 +18,7 @@ export interface ComputeConstructProps {
 
 export class ComputeConstruct extends Construct {
   public readonly flightSearchLambda: lambda.Function;
+  public readonly flightSearchAlias: lambda.Alias;
   public readonly workflowTriggerLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ComputeConstructProps) {
@@ -56,6 +57,13 @@ export class ComputeConstruct extends Construct {
         resources: ['*'],
       }),
     );
+
+    // Create a versioned alias for CodeDeploy traffic shifting
+    const version = this.flightSearchLambda.currentVersion;
+    this.flightSearchAlias = new lambda.Alias(this, 'FlightSearchLambdaLive', {
+      aliasName: 'live',
+      version,
+    });
 
     this.workflowTriggerLambda = new lambda.Function(this, 'WorkflowTriggerLambda', {
       functionName: `${WORKFLOW_TRIGGER_LAMBDA.functionName}-${props.stage}`,

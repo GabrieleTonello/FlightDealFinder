@@ -47,7 +47,30 @@ export class FlightDealPipeline extends cdk.Stack {
 
       createFlightDealStacks(stage, env, config);
 
-      pipeline.addStage(stage);
+      const isDevStage = config.name === 'Dev';
+      const isProdStage = config.name === 'Prod';
+
+      pipeline.addStage(stage, {
+        // After Dev: run integration tests
+        ...(isDevStage && {
+          post: [
+            new pipelines.ShellStep('IntegrationTests', {
+              commands: [
+                'cd integration-tests',
+                './gradlew test',
+              ],
+            }),
+          ],
+        }),
+        // Before Prod: require manual approval
+        ...(isProdStage && {
+          pre: [
+            new pipelines.ManualApprovalStep('PromoteToProd', {
+              comment: 'Dev integration tests passed. Approve deployment to production?',
+            }),
+          ],
+        }),
+      });
     });
   }
 }

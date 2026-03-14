@@ -22,6 +22,7 @@ export interface ObservabilityConstructProps {
 export class ObservabilityConstruct extends Construct {
   public readonly dashboard: cloudwatch.Dashboard;
   public readonly alertingTopic: sns.Topic;
+  public readonly flightSearchErrorAlarm: cloudwatch.Alarm;
 
   constructor(scope: Construct, id: string, props: ObservabilityConstructProps) {
     super(scope, id);
@@ -65,6 +66,7 @@ export class ObservabilityConstruct extends Construct {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     flightSearchErrorAlarm.addAlarmAction(alarmAction);
+    this.flightSearchErrorAlarm = flightSearchErrorAlarm;
 
     const workflowFailureAlarm = new cloudwatch.Alarm(this, 'WorkflowFailureAlarm', {
       alarmName: ALARM_NAMES.workflowFailures(props.stage),

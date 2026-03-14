@@ -2,6 +2,7 @@ import { Stack, StackProps, Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as codedeploy from 'aws-cdk-lib/aws-codedeploy';
 import { DataStoreConstruct } from '../constructs/data-store';
 import { MessagingConstruct } from '../constructs/messaging';
 import { ComputeConstruct } from '../constructs/compute';
@@ -48,9 +49,9 @@ export class FlightDealNotifierStack extends Stack {
       stage: props.stage,
     });
 
-    // 4. Scheduling — EventBridge hourly rule targeting Flight Search Lambda
+    // 4. Scheduling — EventBridge hourly rule targeting the CodeDeploy alias
     new SchedulingConstruct(this, 'Scheduling', {
-      flightSearchLambda: compute.flightSearchLambda,
+      flightSearchLambda: compute.flightSearchAlias,
     });
 
     // 5. Placeholder Lambdas for Step Functions workflow tasks
@@ -126,7 +127,7 @@ export class FlightDealNotifierStack extends Stack {
     );
 
     // 7. Observability — CloudWatch dashboard and alarms
-    new ObservabilityConstruct(this, 'Observability', {
+    const observability = new ObservabilityConstruct(this, 'Observability', {
       flightSearchLambda: compute.flightSearchLambda,
       workflowTriggerLambda: compute.workflowTriggerLambda,
       dealQueue: messaging.dealQueue,
@@ -134,6 +135,14 @@ export class FlightDealNotifierStack extends Stack {
       table: dataStore.flightPriceHistoryTable,
       stateMachine: workflow.stateMachine,
       stage: props.stage,
+    });
+
+    // 8. CodeDeploy — 2-hour linear bake with alarm-based auto-rollback
+    //    LINEAR_10PERCENT_EVERY_10MINUTES shifts 10% every 10 min (~100 min total bake)
+    new codedeploy.LambdaDeploymentGroup(this, 'FlightSearchDeploymentGroup', {
+      alias: compute.flightSearchAlias,
+      deploymentConfig: codedeploy.LambdaDeploymentConfig.LINEAR_10PERCENT_EVERY_10MINUTES,
+      alarms: [observability.flightSearchErrorAlarm],
     });
   }
 }

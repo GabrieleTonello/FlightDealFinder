@@ -1,0 +1,19 @@
+{
+  "api": {
+    "currency": "EUR",
+    "language": "en",
+    "travelClass": 1,
+    "adults": 1
+  },
+  "search": {
+    "routes": [
+      "JFK-CDG"
+    ],
+    "maxPricePerFlight": 1500,
+    "maxStops": 2
+  },
+  "notification": {
+    "recipientEmail": "[email]",
+    "senderEmail": "[email]"
+  }
+}

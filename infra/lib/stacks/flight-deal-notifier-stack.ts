@@ -8,6 +8,7 @@ import { ComputeConstruct } from '../constructs/compute';
 import { SchedulingConstruct } from '../constructs/scheduling';
 import { WorkflowConstruct } from '../constructs/workflow';
 import { ObservabilityConstruct } from '../constructs/observability';
+import { AppConfigConstruct } from '../constructs/appconfig';
 
 /**
  * Main stack composing all Flight Deal Notifier constructs.
@@ -19,7 +20,12 @@ export class FlightDealNotifierStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // 1. Data Store — DynamoDB table for flight price history
+    // 1. AppConfig — dynamic configuration for flight search settings
+    const appConfig = new AppConfigConstruct(this, 'AppConfig', {
+      stage: 'dev',
+    });
+
+    // 2. Data Store — DynamoDB table for flight price history
     const dataStore = new DataStoreConstruct(this, 'DataStore');
 
     // 2. Messaging — SNS topic, SQS deal queue, DLQ
@@ -88,6 +94,31 @@ export class FlightDealNotifierStack extends Stack {
         actions: ['states:StartExecution'],
         resources: [workflow.stateMachine.stateMachineArn],
       }),
+    );
+
+    // Wire AppConfig env vars to Flight Search Lambda for the extension
+    compute.flightSearchLambda.addEnvironment(
+      'APPCONFIG_APPLICATION_ID', appConfig.application.ref);
+    compute.flightSearchLambda.addEnvironment(
+      'APPCONFIG_ENVIRONMENT_ID', appConfig.environment.ref);
+    compute.flightSearchLambda.addEnvironment(
+      'APPCONFIG_CONFIGURATION_PROFILE_ID', appConfig.configurationProfile.ref);
+
+    // Grant AppConfig read permissions
+    compute.flightSearchLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [
+          'appconfig:GetLatestConfiguration',
+          'appconfig:StartConfigurationSession',
+        ],
+        resources: ['*'],
+      }),
+    );
+
+    // Add AppConfig Lambda extension layer (us-east-1 ARN, adjust for your region)
+    compute.flightSearchLambda.addLayers(
+      lambda.LayerVersion.fromLayerVersionArn(this, 'AppConfigExtension',
+        'arn:aws:lambda:us-east-1:027255383542:layer:AWS-AppConfig-Extension:128'),
     );
 
     // 7. Observability — CloudWatch dashboard and alarms

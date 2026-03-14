@@ -5,12 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import com.flightdeal.generated.model.Airport;
+import com.flightdeal.generated.model.FlightDeal;
+import com.flightdeal.generated.model.FlightSegment;
 import com.flightdeal.generated.model.TimeWindow;
 import com.flightdeal.proxy.CalendarApiException;
 import com.flightdeal.proxy.GoogleCalendarClient;
 import com.flightdeal.service.CalendarService;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,7 +35,7 @@ class CalendarDateRangePropertyTest {
 
     CalendarService calendarService = new CalendarService(googleCalendarClient);
 
-    List<JsonObject> flights =
+    List<FlightDeal> flights =
         dates.stream()
             .map(dd -> createFlight(dd.departure, dd.arrival))
             .collect(Collectors.toList());
@@ -73,24 +74,28 @@ class CalendarDateRangePropertyTest {
 
   record FlightDates(String departure, String arrival) {}
 
-  private static JsonObject createFlight(String depDate, String arrDate) {
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", 200);
-    JsonArray flights = new JsonArray();
-    JsonObject segment = new JsonObject();
-    JsonObject dep = new JsonObject();
-    dep.addProperty("id", "JFK");
-    dep.addProperty("name", "JFK Airport");
-    dep.addProperty("time", depDate + " 10:00");
-    segment.add("departure_airport", dep);
-    JsonObject arr = new JsonObject();
-    arr.addProperty("id", "CDG");
-    arr.addProperty("name", "CDG Airport");
-    arr.addProperty("time", arrDate + " 18:00");
-    segment.add("arrival_airport", arr);
-    segment.addProperty("airline", "TestAir");
-    flights.add(segment);
-    flight.add("flights", flights);
-    return flight;
+  private static FlightDeal createFlight(String depDate, String arrDate) {
+    return FlightDeal.builder()
+        .flights(
+            List.of(
+                FlightSegment.builder()
+                    .departureAirport(
+                        Airport.builder()
+                            .id("JFK")
+                            .name("JFK Airport")
+                            .time(depDate + " 10:00")
+                            .build())
+                    .arrivalAirport(
+                        Airport.builder()
+                            .id("CDG")
+                            .name("CDG Airport")
+                            .time(arrDate + " 18:00")
+                            .build())
+                    .duration(480)
+                    .airline("TestAir")
+                    .build()))
+        .totalDuration(480)
+        .price(200)
+        .build();
   }
 }

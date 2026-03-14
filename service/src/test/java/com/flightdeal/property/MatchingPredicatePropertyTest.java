@@ -3,16 +3,17 @@ package com.flightdeal.property;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.flightdeal.generated.model.Airport;
+import com.flightdeal.generated.model.FlightDeal;
+import com.flightdeal.generated.model.FlightSegment;
 import com.flightdeal.generated.model.TimeWindow;
 import com.flightdeal.service.FlightMatcher;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.time.LocalDate;
 import java.util.List;
 import net.jqwik.api.*;
 
 /**
- * Property 10: For any flight JsonObject and TimeWindow, the flight matches iff departure date >=
+ * Property 10: For any FlightDeal and TimeWindow, the flight matches iff departure date >=
  * window.start AND arrival date <= window.end.
  */
 class MatchingPredicatePropertyTest {
@@ -22,11 +23,11 @@ class MatchingPredicatePropertyTest {
   @Property(tries = 100)
   void flightMatchesIffEntirelyWithinWindow(@ForAll("flightAndWindow") FlightAndWindow input) {
 
-    JsonObject flight = createFlight(input.departureDate, input.arrivalDate);
+    FlightDeal deal = createFlight(input.departureDate, input.arrivalDate);
     TimeWindow window =
         TimeWindow.builder().startDate(input.windowStart).endDate(input.windowEnd).build();
 
-    List<JsonObject> result = flightMatcher.matchDeals(List.of(flight), List.of(window));
+    List<FlightDeal> result = flightMatcher.matchDeals(List.of(deal), List.of(window));
 
     boolean departureOnOrAfterStart = input.departureDate.compareTo(input.windowStart) >= 0;
     boolean arrivalOnOrBeforeEnd = input.arrivalDate.compareTo(input.windowEnd) <= 0;
@@ -75,25 +76,28 @@ class MatchingPredicatePropertyTest {
   record FlightAndWindow(
       String departureDate, String arrivalDate, String windowStart, String windowEnd) {}
 
-  private static JsonObject createFlight(String depDate, String arrDate) {
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", 200);
-    flight.addProperty("total_duration", 480);
-    JsonArray flights = new JsonArray();
-    JsonObject segment = new JsonObject();
-    JsonObject dep = new JsonObject();
-    dep.addProperty("id", "JFK");
-    dep.addProperty("name", "JFK Airport");
-    dep.addProperty("time", depDate + " 10:00");
-    segment.add("departure_airport", dep);
-    JsonObject arr = new JsonObject();
-    arr.addProperty("id", "CDG");
-    arr.addProperty("name", "CDG Airport");
-    arr.addProperty("time", arrDate + " 18:00");
-    segment.add("arrival_airport", arr);
-    segment.addProperty("airline", "TestAir");
-    flights.add(segment);
-    flight.add("flights", flights);
-    return flight;
+  private static FlightDeal createFlight(String depDate, String arrDate) {
+    return FlightDeal.builder()
+        .flights(
+            List.of(
+                FlightSegment.builder()
+                    .departureAirport(
+                        Airport.builder()
+                            .id("JFK")
+                            .name("JFK Airport")
+                            .time(depDate + " 10:00")
+                            .build())
+                    .arrivalAirport(
+                        Airport.builder()
+                            .id("CDG")
+                            .name("CDG Airport")
+                            .time(arrDate + " 18:00")
+                            .build())
+                    .duration(480)
+                    .airline("TestAir")
+                    .build()))
+        .totalDuration(480)
+        .price(200)
+        .build();
   }
 }

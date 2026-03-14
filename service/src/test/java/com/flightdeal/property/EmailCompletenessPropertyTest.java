@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.flightdeal.generated.model.Airport;
+import com.flightdeal.generated.model.FlightDeal;
+import com.flightdeal.generated.model.FlightSegment;
 import com.flightdeal.service.NotificationService;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.jqwik.api.*;
@@ -31,7 +32,7 @@ class EmailCompletenessPropertyTest {
     NotificationService service =
         new NotificationService(sesClient, "sender@test.com", "recipient@test.com");
 
-    List<JsonObject> flights =
+    List<FlightDeal> flights =
         flightInputs.stream()
             .map(input -> createFlight(input.price, input.airline, input.depName, input.arrName))
             .collect(Collectors.toList());
@@ -82,26 +83,21 @@ class EmailCompletenessPropertyTest {
 
   record FlightInput(int price, String airline, String depName, String arrName) {}
 
-  private static JsonObject createFlight(
+  private static FlightDeal createFlight(
       int price, String airline, String depName, String arrName) {
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", price);
-    flight.addProperty("total_duration", 480);
-    JsonArray flights = new JsonArray();
-    JsonObject segment = new JsonObject();
-    JsonObject dep = new JsonObject();
-    dep.addProperty("id", "DEP");
-    dep.addProperty("name", depName);
-    dep.addProperty("time", "2025-07-01 10:00");
-    segment.add("departure_airport", dep);
-    JsonObject arr = new JsonObject();
-    arr.addProperty("id", "ARR");
-    arr.addProperty("name", arrName);
-    arr.addProperty("time", "2025-07-01 18:00");
-    segment.add("arrival_airport", arr);
-    segment.addProperty("airline", airline);
-    flights.add(segment);
-    flight.add("flights", flights);
-    return flight;
+    return FlightDeal.builder()
+        .flights(
+            List.of(
+                FlightSegment.builder()
+                    .departureAirport(
+                        Airport.builder().id("DEP").name(depName).time("2025-07-01 10:00").build())
+                    .arrivalAirport(
+                        Airport.builder().id("ARR").name(arrName).time("2025-07-01 18:00").build())
+                    .duration(480)
+                    .airline(airline)
+                    .build()))
+        .totalDuration(480)
+        .price(price)
+        .build();
   }
 }

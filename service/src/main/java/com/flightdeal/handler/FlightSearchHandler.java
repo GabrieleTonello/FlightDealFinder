@@ -4,13 +4,15 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.dao.PriceRecordEntity;
+import com.flightdeal.generated.model.Airport;
+import com.flightdeal.generated.model.CarbonEmissions;
+import com.flightdeal.generated.model.FlightDeal;
+import com.flightdeal.generated.model.FlightSegment;
 import com.flightdeal.guice.FlightSearchModule;
 import com.flightdeal.metrics.MetricsEmitter;
 import com.flightdeal.proxy.FlightApiClient;
 import com.flightdeal.proxy.FlightApiException;
 import com.flightdeal.proxy.FlightSearchResponse;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -154,14 +156,14 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
     String timestamp = Instant.now().toString();
     List<PriceRecordEntity> entities = new ArrayList<>();
 
-    for (JsonObject flight : response.bestFlights()) {
-      PriceRecordEntity entity = parseFlightNode(flight, route, timestamp, "best");
+    for (FlightDeal deal : response.bestFlights()) {
+      PriceRecordEntity entity = parseFlightNode(deal, route, timestamp, "best");
       if (entity != null) {
         entities.add(entity);
       }
     }
-    for (JsonObject flight : response.otherFlights()) {
-      PriceRecordEntity entity = parseFlightNode(flight, route, timestamp, "other");
+    for (FlightDeal deal : response.otherFlights()) {
+      PriceRecordEntity entity = parseFlightNode(deal, route, timestamp, "other");
       if (entity != null) {
         entities.add(entity);
       }
@@ -170,49 +172,42 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
   }
 
   PriceRecordEntity parseFlightNode(
-      JsonObject flight, String route, String timestamp, String dealType) {
+      FlightDeal deal, String route, String timestamp, String dealType) {
     try {
-      int price = flight.has("price") ? flight.get("price").getAsInt() : 0;
-      int totalDuration =
-          flight.has("total_duration") ? flight.get("total_duration").getAsInt() : 0;
+      int price = deal.getPrice();
+      int totalDuration = deal.getTotalDuration();
 
-      if (!flight.has("flights") || !flight.get("flights").isJsonArray()) {
-        return null;
-      }
-      JsonArray flightsArray = flight.getAsJsonArray("flights");
-      if (flightsArray.size() == 0) {
+      List<FlightSegment> segments = deal.getFlights();
+      if (segments == null || segments.isEmpty()) {
         return null;
       }
 
-      JsonObject firstSegment = flightsArray.get(0).getAsJsonObject();
-      JsonObject lastSegment = flightsArray.get(flightsArray.size() - 1).getAsJsonObject();
+      FlightSegment firstSegment = segments.get(0);
+      FlightSegment lastSegment = segments.get(segments.size() - 1);
 
-      JsonObject depAirport =
-          firstSegment.has("departure_airport")
-              ? firstSegment.getAsJsonObject("departure_airport")
-              : new JsonObject();
-      JsonObject arrAirport =
-          lastSegment.has("arrival_airport")
-              ? lastSegment.getAsJsonObject("arrival_airport")
-              : new JsonObject();
+      Airport depAirport =
+          firstSegment.getDepartureAirport() != null
+              ? firstSegment.getDepartureAirport()
+              : Airport.builder().name("").id("").build();
+      Airport arrAirport =
+          lastSegment.getArrivalAirport() != null
+              ? lastSegment.getArrivalAirport()
+              : Airport.builder().name("").id("").build();
 
-      String depAirportId = depAirport.has("id") ? depAirport.get("id").getAsString() : "";
-      String depAirportName = depAirport.has("name") ? depAirport.get("name").getAsString() : "";
-      String depTime = depAirport.has("time") ? depAirport.get("time").getAsString() : "";
-      String arrAirportId = arrAirport.has("id") ? arrAirport.get("id").getAsString() : "";
-      String arrAirportName = arrAirport.has("name") ? arrAirport.get("name").getAsString() : "";
-      String arrTime = arrAirport.has("time") ? arrAirport.get("time").getAsString() : "";
-      String airline = firstSegment.has("airline") ? firstSegment.get("airline").getAsString() : "";
+      String depAirportId = depAirport.getId() != null ? depAirport.getId() : "";
+      String depAirportName = depAirport.getName() != null ? depAirport.getName() : "";
+      String depTime = depAirport.getTime() != null ? depAirport.getTime() : "";
+      String arrAirportId = arrAirport.getId() != null ? arrAirport.getId() : "";
+      String arrAirportName = arrAirport.getName() != null ? arrAirport.getName() : "";
+      String arrTime = arrAirport.getTime() != null ? arrAirport.getTime() : "";
+      String airline = firstSegment.getAirline() != null ? firstSegment.getAirline() : "";
       String flightNumber =
-          firstSegment.has("flight_number") ? firstSegment.get("flight_number").getAsString() : "";
-      int segments = flightsArray.size();
+          firstSegment.getFlightNumber() != null ? firstSegment.getFlightNumber() : "";
 
       Integer carbonEmissionsValue = null;
-      if (flight.has("carbon_emissions")) {
-        JsonObject carbonObj = flight.getAsJsonObject("carbon_emissions");
-        if (carbonObj.has("this_flight")) {
-          carbonEmissionsValue = carbonObj.get("this_flight").getAsInt();
-        }
+      CarbonEmissions carbon = deal.getCarbonEmissions();
+      if (carbon != null && carbon.getThisFlight() != null) {
+        carbonEmissionsValue = carbon.getThisFlight();
       }
 
       return PriceRecordEntity.builder()
@@ -227,7 +222,7 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
           .arrivalTime(arrTime)
           .airline(airline)
           .totalDuration(totalDuration)
-          .segments(segments)
+          .segments(segments.size())
           .flightNumber(flightNumber)
           .dealType(dealType)
           .carbonEmissions(carbonEmissionsValue)

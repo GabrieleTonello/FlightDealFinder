@@ -7,12 +7,14 @@ import static org.mockito.Mockito.*;
 
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.dao.PriceRecordEntity;
+import com.flightdeal.generated.model.Airport;
+import com.flightdeal.generated.model.CarbonEmissions;
+import com.flightdeal.generated.model.FlightDeal;
+import com.flightdeal.generated.model.FlightSegment;
 import com.flightdeal.metrics.MetricsEmitter;
 import com.flightdeal.proxy.FlightApiClient;
 import com.flightdeal.proxy.FlightApiException;
 import com.flightdeal.proxy.FlightSearchResponse;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +60,7 @@ class FlightSearchHandlerTest {
         RETURN_DATE);
   }
 
-  static JsonObject flightNode(
+  static FlightDeal flightNode(
       int price,
       String depId,
       String depName,
@@ -69,40 +71,24 @@ class FlightSearchHandlerTest {
       String airline,
       int totalDuration,
       String flightNumber) {
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", price);
-    flight.addProperty("total_duration", totalDuration);
-
-    JsonArray flightsArray = new JsonArray();
-    JsonObject segment = new JsonObject();
-
-    JsonObject depAirport = new JsonObject();
-    depAirport.addProperty("id", depId);
-    depAirport.addProperty("name", depName);
-    depAirport.addProperty("time", depTime);
-    segment.add("departure_airport", depAirport);
-
-    JsonObject arrAirport = new JsonObject();
-    arrAirport.addProperty("id", arrId);
-    arrAirport.addProperty("name", arrName);
-    arrAirport.addProperty("time", arrTime);
-    segment.add("arrival_airport", arrAirport);
-
-    segment.addProperty("airline", airline);
-    segment.addProperty("flight_number", flightNumber);
-    segment.addProperty("duration", totalDuration);
-
-    flightsArray.add(segment);
-    flight.add("flights", flightsArray);
-
-    JsonObject carbonEmissions = new JsonObject();
-    carbonEmissions.addProperty("this_flight", 150000);
-    flight.add("carbon_emissions", carbonEmissions);
-
-    return flight;
+    return FlightDeal.builder()
+        .flights(
+            List.of(
+                FlightSegment.builder()
+                    .departureAirport(
+                        Airport.builder().id(depId).name(depName).time(depTime).build())
+                    .arrivalAirport(Airport.builder().id(arrId).name(arrName).time(arrTime).build())
+                    .airline(airline)
+                    .flightNumber(flightNumber)
+                    .duration(totalDuration)
+                    .build()))
+        .totalDuration(totalDuration)
+        .price(price)
+        .carbonEmissions(CarbonEmissions.builder().thisFlight(150000).build())
+        .build();
   }
 
-  static JsonObject sampleFlight(String depId, String arrId, int price) {
+  static FlightDeal sampleFlight(String depId, String arrId, int price) {
     return flightNode(
         price,
         depId,
@@ -116,14 +102,14 @@ class FlightSearchHandlerTest {
         "TA100");
   }
 
-  private FlightSearchResponse responseWith(List<JsonObject> best, List<JsonObject> other) {
+  private FlightSearchResponse responseWith(List<FlightDeal> best, List<FlightDeal> other) {
     return new FlightSearchResponse(best, other, "{\"best_flights\":[],\"other_flights\":[]}");
   }
 
   @Test
   void handleRequest_successPath_savesAndPublishes() throws Exception {
-    JsonObject jfkCdg = sampleFlight("JFK", "CDG", 299);
-    JsonObject laxNrt = sampleFlight("LAX", "NRT", 899);
+    FlightDeal jfkCdg = sampleFlight("JFK", "CDG", 299);
+    FlightDeal laxNrt = sampleFlight("LAX", "NRT", 899);
 
     when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
         .thenReturn(responseWith(List.of(jfkCdg), List.of()));
@@ -144,7 +130,7 @@ class FlightSearchHandlerTest {
 
   @Test
   void handleRequest_partialFailure_continuesWithSuccessfulRoutes() throws Exception {
-    JsonObject jfkCdg = sampleFlight("JFK", "CDG", 299);
+    FlightDeal jfkCdg = sampleFlight("JFK", "CDG", 299);
     when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
         .thenReturn(responseWith(List.of(jfkCdg), List.of()));
     when(flightApiClient.searchFlights("LAX", "NRT", OUTBOUND_DATE, RETURN_DATE))
@@ -192,7 +178,7 @@ class FlightSearchHandlerTest {
   @Test
   @SuppressWarnings("unchecked")
   void handleRequest_saveBatchEntitiesHaveCorrectFields() throws Exception {
-    JsonObject flight =
+    FlightDeal flight =
         flightNode(
             450,
             "JFK",
@@ -317,13 +303,20 @@ class FlightSearchHandlerTest {
 
   @Test
   void parseFlightNode_missingFields_usesDefaults() throws Exception {
-    // Flight with minimal fields - no airports, no airline, no carbon
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", 100);
-    JsonArray flightsArray = new JsonArray();
-    JsonObject segment = new JsonObject();
-    flightsArray.add(segment);
-    flight.add("flights", flightsArray);
+    // Flight with minimal fields - segment with no airports, no airline info, no carbon
+    FlightDeal flight =
+        FlightDeal.builder()
+            .flights(
+                List.of(
+                    FlightSegment.builder()
+                        .departureAirport(Airport.builder().name("").id("").build())
+                        .arrivalAirport(Airport.builder().name("").id("").build())
+                        .duration(0)
+                        .airline("")
+                        .build()))
+            .totalDuration(0)
+            .price(100)
+            .build();
 
     handler = createHandler(List.of("JFK-CDG"));
     FlightSearchResponse response = new FlightSearchResponse(List.of(flight), List.of(), "{}");
@@ -337,19 +330,8 @@ class FlightSearchHandlerTest {
   }
 
   @Test
-  void parseFlightNode_emptyFlightsArray_returnsNull() {
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", 100);
-    flight.add("flights", new JsonArray());
-
-    PriceRecordEntity entity = handler.parseFlightNode(flight, "JFK-CDG", "2025-01-01", "best");
-    assertNull(entity);
-  }
-
-  @Test
-  void parseFlightNode_noFlightsKey_returnsNull() {
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", 100);
+  void parseFlightNode_emptyFlightsList_returnsNull() {
+    FlightDeal flight = FlightDeal.builder().flights(List.of()).totalDuration(0).price(100).build();
 
     PriceRecordEntity entity = handler.parseFlightNode(flight, "JFK-CDG", "2025-01-01", "best");
     assertNull(entity);
@@ -357,27 +339,31 @@ class FlightSearchHandlerTest {
 
   @Test
   void parseFlightNode_carbonEmissionsWithoutThisFlight_returnsNullCarbon() {
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", 200);
-    flight.addProperty("total_duration", 300);
-    JsonArray flightsArray = new JsonArray();
-    JsonObject segment = new JsonObject();
-    JsonObject depAirport = new JsonObject();
-    depAirport.addProperty("id", "JFK");
-    depAirport.addProperty("name", "JFK");
-    depAirport.addProperty("time", "2025-07-01 10:00");
-    segment.add("departure_airport", depAirport);
-    JsonObject arrAirport = new JsonObject();
-    arrAirport.addProperty("id", "CDG");
-    arrAirport.addProperty("name", "CDG");
-    arrAirport.addProperty("time", "2025-07-01 18:00");
-    segment.add("arrival_airport", arrAirport);
-    segment.addProperty("airline", "TestAir");
-    segment.addProperty("flight_number", "TA100");
-    flightsArray.add(segment);
-    flight.add("flights", flightsArray);
-    // carbon_emissions present but no this_flight
-    flight.add("carbon_emissions", new JsonObject());
+    FlightDeal flight =
+        FlightDeal.builder()
+            .flights(
+                List.of(
+                    FlightSegment.builder()
+                        .departureAirport(
+                            Airport.builder()
+                                .id("JFK")
+                                .name("JFK")
+                                .time("2025-07-01 10:00")
+                                .build())
+                        .arrivalAirport(
+                            Airport.builder()
+                                .id("CDG")
+                                .name("CDG")
+                                .time("2025-07-01 18:00")
+                                .build())
+                        .duration(480)
+                        .airline("TestAir")
+                        .flightNumber("TA100")
+                        .build()))
+            .totalDuration(300)
+            .price(200)
+            .carbonEmissions(CarbonEmissions.builder().build())
+            .build();
 
     PriceRecordEntity entity = handler.parseFlightNode(flight, "JFK-CDG", "2025-01-01", "best");
     assertNotNull(entity);
@@ -386,8 +372,8 @@ class FlightSearchHandlerTest {
 
   @Test
   void handleRequest_bestAndOtherFlightsParsed() throws Exception {
-    JsonObject best = sampleFlight("JFK", "CDG", 299);
-    JsonObject other = sampleFlight("JFK", "CDG", 499);
+    FlightDeal best = sampleFlight("JFK", "CDG", 299);
+    FlightDeal other = sampleFlight("JFK", "CDG", 499);
     handler = createHandler(List.of("JFK-CDG"));
     when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
         .thenReturn(responseWith(List.of(best), List.of(other)));

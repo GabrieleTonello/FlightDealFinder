@@ -1,5 +1,6 @@
 package com.flightdeal.proxy;
 
+import com.flightdeal.generated.model.FlightDeal;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ import serpapi.SerpApiException;
 
 /**
  * Proxy client for querying the SerpApi Google Flights API using the official serpapi-java library.
- * Returns raw GSON JsonObjects for best_flights and other_flights.
+ * Returns typed {@link FlightDeal} objects mapped from the raw GSON response.
  */
 @Slf4j
 public class FlightApiClient {
@@ -37,7 +38,7 @@ public class FlightApiClient {
    * @param arrivalId arrival airport IATA code
    * @param outboundDate departure date (YYYY-MM-DD)
    * @param returnDate return date (YYYY-MM-DD)
-   * @return parsed response with best and other flights as GSON JsonObjects
+   * @return parsed response with best and other flights as typed FlightDeal objects
    * @throws FlightApiException on API errors
    */
   public FlightSearchResponse searchFlights(
@@ -60,8 +61,8 @@ public class FlightApiClient {
     try {
       JsonObject result = serpApi.search(params);
 
-      List<JsonObject> bestFlights = extractFlightArray(result, "best_flights");
-      List<JsonObject> otherFlights = extractFlightArray(result, "other_flights");
+      List<FlightDeal> bestFlights = extractFlightArray(result, "best_flights");
+      List<FlightDeal> otherFlights = extractFlightArray(result, "other_flights");
 
       log.info(
           "Route {}: {} best flights, {} other flights",
@@ -76,12 +77,12 @@ public class FlightApiClient {
     }
   }
 
-  private List<JsonObject> extractFlightArray(JsonObject result, String key) {
-    List<JsonObject> flights = new ArrayList<>();
+  private List<FlightDeal> extractFlightArray(JsonObject result, String key) {
+    List<FlightDeal> flights = new ArrayList<>();
     if (result.has(key) && result.get(key).isJsonArray()) {
       JsonArray array = result.getAsJsonArray(key);
       for (int i = 0; i < array.size(); i++) {
-        flights.add(array.get(i).getAsJsonObject());
+        flights.add(SerpApiResponseMapper.mapFlightDeal(array.get(i).getAsJsonObject()));
       }
     }
     return flights;

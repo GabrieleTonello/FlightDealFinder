@@ -6,12 +6,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.flightdeal.dao.PriceRecordDao;
+import com.flightdeal.generated.model.Airport;
+import com.flightdeal.generated.model.FlightDeal;
+import com.flightdeal.generated.model.FlightSegment;
 import com.flightdeal.handler.FlightSearchHandler;
 import com.flightdeal.metrics.MetricsEmitter;
 import com.flightdeal.proxy.FlightApiClient;
 import com.flightdeal.proxy.FlightSearchResponse;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.util.List;
 import net.jqwik.api.*;
 import org.mockito.ArgumentCaptor;
@@ -34,7 +35,7 @@ class PublishAfterStoragePropertyTest {
         .thenReturn(PublishResponse.builder().build());
 
     String rawResponse = "{\"best_flights\":[{\"price\":200}],\"other_flights\":[]}";
-    JsonObject sampleFlight = createSampleFlight();
+    FlightDeal sampleFlight = createSampleFlight();
 
     for (String route : routes) {
       String[] parts = route.split("-");
@@ -72,26 +73,29 @@ class PublishAfterStoragePropertyTest {
         .uniqueElements();
   }
 
-  private static JsonObject createSampleFlight() {
-    JsonObject flight = new JsonObject();
-    flight.addProperty("price", 200);
-    flight.addProperty("total_duration", 480);
-    JsonArray flights = new JsonArray();
-    JsonObject segment = new JsonObject();
-    JsonObject dep = new JsonObject();
-    dep.addProperty("id", "DEP");
-    dep.addProperty("name", "Departure");
-    dep.addProperty("time", "2025-07-01 10:00");
-    segment.add("departure_airport", dep);
-    JsonObject arr = new JsonObject();
-    arr.addProperty("id", "ARR");
-    arr.addProperty("name", "Arrival");
-    arr.addProperty("time", "2025-07-01 18:00");
-    segment.add("arrival_airport", arr);
-    segment.addProperty("airline", "TestAir");
-    segment.addProperty("flight_number", "TA100");
-    flights.add(segment);
-    flight.add("flights", flights);
-    return flight;
+  private static FlightDeal createSampleFlight() {
+    return FlightDeal.builder()
+        .flights(
+            List.of(
+                FlightSegment.builder()
+                    .departureAirport(
+                        Airport.builder()
+                            .id("DEP")
+                            .name("Departure")
+                            .time("2025-07-01 10:00")
+                            .build())
+                    .arrivalAirport(
+                        Airport.builder()
+                            .id("ARR")
+                            .name("Arrival")
+                            .time("2025-07-01 18:00")
+                            .build())
+                    .duration(480)
+                    .airline("TestAir")
+                    .flightNumber("TA100")
+                    .build()))
+        .totalDuration(480)
+        .price(200)
+        .build();
   }
 }

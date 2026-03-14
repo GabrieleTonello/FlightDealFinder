@@ -1,14 +1,15 @@
 package com.flightdeal.proxy;
 
-import com.google.gson.JsonObject;
+import com.flightdeal.generated.model.FlightDeal;
 import java.util.List;
 
 /**
- * Parsed response from the SerpApi Google Flights API. Contains GSON JsonObjects for best_flights
- * and other_flights arrays, plus the raw response string for downstream publishing.
+ * Parsed response from the SerpApi Google Flights API. Contains typed {@link FlightDeal} objects
+ * for best_flights and other_flights arrays, plus the raw response string for downstream
+ * publishing.
  */
 public record FlightSearchResponse(
-    List<JsonObject> bestFlights, List<JsonObject> otherFlights, String rawResponse) {
+    List<FlightDeal> bestFlights, List<FlightDeal> otherFlights, String rawResponse) {
   public int totalFlightCount() {
     return bestFlights.size() + otherFlights.size();
   }

@@ -1,8 +1,9 @@
 package com.flightdeal.service;
 
+import com.flightdeal.generated.model.Airport;
+import com.flightdeal.generated.model.FlightDeal;
+import com.flightdeal.generated.model.FlightSegment;
 import com.flightdeal.generated.model.TimeWindow;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Comparator;
@@ -10,8 +11,8 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Compares flight deals (as JsonObject objects from SerpApi) against free calendar windows and
- * returns matching deals sorted by price ascending.
+ * Compares flight deals against free calendar windows and returns matching deals sorted by price
+ * ascending.
  *
  * <p>A deal matches a window when the first segment's departure time date is on or after the window
  * start date AND the last segment's arrival time date is on or before the window end date.
@@ -24,13 +25,13 @@ public class FlightMatcher {
   public FlightMatcher() {}
 
   /**
-   * Matches flight deal JsonObjects against free calendar windows.
+   * Matches flight deals against free calendar windows.
    *
-   * @param flights the available flight deal JsonObjects from SerpApi
+   * @param flights the available flight deals
    * @param freeWindows the user's free calendar windows
    * @return matched flights sorted by price ascending, or empty list if none match
    */
-  public List<JsonObject> matchDeals(List<JsonObject> flights, List<TimeWindow> freeWindows) {
+  public List<FlightDeal> matchDeals(List<FlightDeal> flights, List<TimeWindow> freeWindows) {
     if (flights == null || flights.isEmpty() || freeWindows == null || freeWindows.isEmpty()) {
       log.info(
           "No matches possible: flights={}, freeWindows={}",
@@ -39,12 +40,10 @@ public class FlightMatcher {
       return List.of();
     }
 
-    List<JsonObject> matched =
+    List<FlightDeal> matched =
         flights.stream()
-            .filter(flight -> fitsAnyWindow(flight, freeWindows))
-            .sorted(
-                Comparator.comparingInt(
-                    f -> f.has("price") ? f.get("price").getAsInt() : Integer.MAX_VALUE))
+            .filter(deal -> fitsAnyWindow(deal, freeWindows))
+            .sorted(Comparator.comparingInt(FlightDeal::getPrice))
             .toList();
 
     if (matched.isEmpty()) {
@@ -63,13 +62,13 @@ public class FlightMatcher {
     return matched;
   }
 
-  private boolean fitsAnyWindow(JsonObject flight, List<TimeWindow> windows) {
-    return windows.stream().anyMatch(window -> fitsWindow(flight, window));
+  private boolean fitsAnyWindow(FlightDeal deal, List<TimeWindow> windows) {
+    return windows.stream().anyMatch(window -> fitsWindow(deal, window));
   }
 
-  private boolean fitsWindow(JsonObject flight, TimeWindow window) {
-    String departureDate = extractDepartureDate(flight);
-    String arrivalDate = extractArrivalDate(flight);
+  private boolean fitsWindow(FlightDeal deal, TimeWindow window) {
+    String departureDate = extractDepartureDate(deal);
+    String arrivalDate = extractArrivalDate(deal);
 
     if (departureDate == null || arrivalDate == null) {
       return false;
@@ -79,38 +78,28 @@ public class FlightMatcher {
         && arrivalDate.compareTo(window.getEndDate()) <= 0;
   }
 
-  private String extractDepartureDate(JsonObject flight) {
-    if (!flight.has("flights") || !flight.get("flights").isJsonArray()) {
+  private String extractDepartureDate(FlightDeal deal) {
+    List<FlightSegment> segments = deal.getFlights();
+    if (segments == null || segments.isEmpty()) {
       return null;
     }
-    JsonArray flightsArray = flight.getAsJsonArray("flights");
-    if (flightsArray.size() == 0) {
+    Airport depAirport = segments.get(0).getDepartureAirport();
+    if (depAirport == null) {
       return null;
     }
-    JsonObject firstSegment = flightsArray.get(0).getAsJsonObject();
-    if (!firstSegment.has("departure_airport")) {
-      return null;
-    }
-    JsonObject depAirport = firstSegment.getAsJsonObject("departure_airport");
-    String time = depAirport.has("time") ? depAirport.get("time").getAsString() : null;
-    return extractDatePart(time);
+    return extractDatePart(depAirport.getTime());
   }
 
-  private String extractArrivalDate(JsonObject flight) {
-    if (!flight.has("flights") || !flight.get("flights").isJsonArray()) {
+  private String extractArrivalDate(FlightDeal deal) {
+    List<FlightSegment> segments = deal.getFlights();
+    if (segments == null || segments.isEmpty()) {
       return null;
     }
-    JsonArray flightsArray = flight.getAsJsonArray("flights");
-    if (flightsArray.size() == 0) {
+    Airport arrAirport = segments.get(segments.size() - 1).getArrivalAirport();
+    if (arrAirport == null) {
       return null;
     }
-    JsonObject lastSegment = flightsArray.get(flightsArray.size() - 1).getAsJsonObject();
-    if (!lastSegment.has("arrival_airport")) {
-      return null;
-    }
-    JsonObject arrAirport = lastSegment.getAsJsonObject("arrival_airport");
-    String time = arrAirport.has("time") ? arrAirport.get("time").getAsString() : null;
-    return extractDatePart(time);
+    return extractDatePart(arrAirport.getTime());
   }
 
   /** Extracts the date part (YYYY-MM-DD) from a datetime string like "2025-07-05 10:30". */

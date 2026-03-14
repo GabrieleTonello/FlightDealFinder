@@ -4,8 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.flightdeal.generated.model.Airport;
+import com.flightdeal.generated.model.FlightDeal;
+import com.flightdeal.generated.model.FlightSegment;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ import software.amazon.awssdk.services.ses.model.SendEmailRequest;
 import software.amazon.awssdk.services.ses.model.SendEmailResponse;
 import software.amazon.awssdk.services.ses.model.SesException;
 
-/** Unit tests for NotificationService with JsonObject-based flights. */
+/** Unit tests for NotificationService with typed FlightDeal objects. */
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
 
@@ -34,7 +35,7 @@ class NotificationServiceTest {
     notificationService = new NotificationService(sesClient, SENDER, RECIPIENT);
   }
 
-  static JsonObject flight(
+  static FlightDeal flight(
       int price,
       String airline,
       String depId,
@@ -44,34 +45,24 @@ class NotificationServiceTest {
       String arrName,
       String arrTime,
       int totalDuration) {
-    JsonObject node = new JsonObject();
-    node.addProperty("price", price);
-    node.addProperty("total_duration", totalDuration);
-
-    JsonArray flights = new JsonArray();
-    JsonObject segment = new JsonObject();
-
-    JsonObject depAirport = new JsonObject();
-    depAirport.addProperty("id", depId);
-    depAirport.addProperty("name", depName);
-    depAirport.addProperty("time", depTime);
-    segment.add("departure_airport", depAirport);
-
-    JsonObject arrAirport = new JsonObject();
-    arrAirport.addProperty("id", arrId);
-    arrAirport.addProperty("name", arrName);
-    arrAirport.addProperty("time", arrTime);
-    segment.add("arrival_airport", arrAirport);
-
-    segment.addProperty("airline", airline);
-    flights.add(segment);
-    node.add("flights", flights);
-    return node;
+    return FlightDeal.builder()
+        .flights(
+            List.of(
+                FlightSegment.builder()
+                    .departureAirport(
+                        Airport.builder().id(depId).name(depName).time(depTime).build())
+                    .arrivalAirport(Airport.builder().id(arrId).name(arrName).time(arrTime).build())
+                    .duration(totalDuration)
+                    .airline(airline)
+                    .build()))
+        .totalDuration(totalDuration)
+        .price(price)
+        .build();
   }
 
   @Test
   void sendDealNotification_success_returnsMessageId() {
-    List<JsonObject> flights =
+    List<FlightDeal> flights =
         List.of(
             flight(
                 299,
@@ -94,7 +85,7 @@ class NotificationServiceTest {
 
   @Test
   void sendDealNotification_emailBodyContainsAllFields() {
-    JsonObject deal =
+    FlightDeal deal =
         flight(
             499,
             "JAL",
@@ -126,7 +117,7 @@ class NotificationServiceTest {
 
   @Test
   void sendDealNotification_multipleDeals_allFormattedInBody() {
-    List<JsonObject> flights =
+    List<FlightDeal> flights =
         List.of(
             flight(
                 299,
@@ -168,7 +159,7 @@ class NotificationServiceTest {
 
   @Test
   void sendDealNotification_sesThrowsException_wrappedAsRuntimeException() {
-    List<JsonObject> flights =
+    List<FlightDeal> flights =
         List.of(
             flight(
                 199,
@@ -195,7 +186,7 @@ class NotificationServiceTest {
 
   @Test
   void sendDealNotification_singleDeal_subjectLineSingular() {
-    List<JsonObject> flights =
+    List<FlightDeal> flights =
         List.of(
             flight(
                 350,
@@ -222,7 +213,7 @@ class NotificationServiceTest {
 
   @Test
   void sendDealNotification_multipleDeals_subjectLinePlural() {
-    List<JsonObject> flights =
+    List<FlightDeal> flights =
         List.of(
             flight(
                 299, "AF", "JFK", "JFK", "2025-07-01 10:00", "CDG", "CDG", "2025-07-01 18:00", 480),
@@ -261,7 +252,7 @@ class NotificationServiceTest {
 
   @Test
   void sendDealNotification_usesCorrectSenderAndRecipient() {
-    List<JsonObject> flights =
+    List<FlightDeal> flights =
         List.of(
             flight(
                 275,

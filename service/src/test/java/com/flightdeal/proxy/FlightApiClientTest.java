@@ -35,6 +35,14 @@ class FlightApiClientTest {
     JsonArray bestSegments = new JsonArray();
     JsonObject bestSeg = new JsonObject();
     bestSeg.addProperty("airline", "AirFrance");
+    JsonObject bestDep = new JsonObject();
+    bestDep.addProperty("name", "JFK");
+    bestDep.addProperty("id", "JFK");
+    bestSeg.add("departure_airport", bestDep);
+    JsonObject bestArr = new JsonObject();
+    bestArr.addProperty("name", "CDG");
+    bestArr.addProperty("id", "CDG");
+    bestSeg.add("arrival_airport", bestArr);
     bestSegments.add(bestSeg);
     bestFlight.add("flights", bestSegments);
     bestFlights.add(bestFlight);
@@ -47,6 +55,14 @@ class FlightApiClientTest {
     JsonArray otherSegments = new JsonArray();
     JsonObject otherSeg = new JsonObject();
     otherSeg.addProperty("airline", "Delta");
+    JsonObject otherDep = new JsonObject();
+    otherDep.addProperty("name", "JFK");
+    otherDep.addProperty("id", "JFK");
+    otherSeg.add("departure_airport", otherDep);
+    JsonObject otherArr = new JsonObject();
+    otherArr.addProperty("name", "CDG");
+    otherArr.addProperty("id", "CDG");
+    otherSeg.add("arrival_airport", otherArr);
     otherSegments.add(otherSeg);
     otherFlight.add("flights", otherSegments);
     otherFlights.add(otherFlight);
@@ -59,8 +75,8 @@ class FlightApiClientTest {
 
     assertEquals(1, response.bestFlights().size());
     assertEquals(1, response.otherFlights().size());
-    assertEquals(299, response.bestFlights().get(0).get("price").getAsInt());
-    assertEquals(499, response.otherFlights().get(0).get("price").getAsInt());
+    assertEquals(299, response.bestFlights().get(0).getPrice());
+    assertEquals(499, response.otherFlights().get(0).getPrice());
     assertTrue(response.hasFlights());
     assertEquals(2, response.totalFlightCount());
   }
@@ -103,6 +119,20 @@ class FlightApiClientTest {
     JsonArray bestFlights = new JsonArray();
     JsonObject flight = new JsonObject();
     flight.addProperty("price", 199);
+    flight.addProperty("total_duration", 480);
+    JsonArray segs = new JsonArray();
+    JsonObject seg = new JsonObject();
+    seg.addProperty("airline", "TestAir");
+    JsonObject dep = new JsonObject();
+    dep.addProperty("name", "JFK");
+    dep.addProperty("id", "JFK");
+    seg.add("departure_airport", dep);
+    JsonObject arr = new JsonObject();
+    arr.addProperty("name", "CDG");
+    arr.addProperty("id", "CDG");
+    seg.add("arrival_airport", arr);
+    segs.add(seg);
+    flight.add("flights", segs);
     bestFlights.add(flight);
     result.add("best_flights", bestFlights);
 
@@ -135,7 +165,6 @@ class FlightApiClientTest {
   @SuppressWarnings("unchecked")
   void searchFlights_handlesMissingFlightArrays() throws Exception {
     JsonObject result = new JsonObject();
-    // No best_flights or other_flights keys
 
     when(serpApi.search(any(Map.class))).thenReturn(result);
 

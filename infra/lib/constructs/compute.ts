@@ -24,7 +24,7 @@ export class ComputeConstruct extends Construct {
   constructor(scope: Construct, id: string, props: ComputeConstructProps) {
     super(scope, id);
 
-    const codePath = lambda.Code.fromAsset('../service/build/libs/');
+    const codePath = lambda.Code.fromAsset('../service/build/libs/flight-deal-notifier-service-1.0.0.jar');
 
     this.flightSearchLambda = new lambda.Function(this, 'FlightSearchLambda', {
       functionName: `${FLIGHT_SEARCH_LAMBDA.functionName}-${props.stage}`,

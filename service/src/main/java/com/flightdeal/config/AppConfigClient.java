@@ -12,9 +12,8 @@ import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Client for fetching configuration from the AWS AppConfig Lambda extension.
- * The extension runs as a sidecar on localhost:2772 and handles caching,
- * polling, and session management automatically.
+ * Client for fetching configuration from the AWS AppConfig Lambda extension. The extension runs as
+ * a sidecar on localhost:2772 and handles caching, polling, and session management automatically.
  */
 @Slf4j
 @Singleton
@@ -38,12 +37,9 @@ public class AppConfigClient {
     this.configProfileId = System.getenv("APPCONFIG_CONFIGURATION_PROFILE_ID");
   }
 
-  /**
-   * Constructor for testing.
-   */
+  /** Constructor for testing. */
   public AppConfigClient(
-      HttpClient httpClient, String applicationId,
-      String environmentId, String configProfileId) {
+      HttpClient httpClient, String applicationId, String environmentId, String configProfileId) {
     this.httpClient = httpClient;
     this.gson = new Gson();
     this.applicationId = applicationId;
@@ -52,33 +48,34 @@ public class AppConfigClient {
   }
 
   /**
-   * Fetches the current flight search configuration from AppConfig.
-   * The Lambda extension caches the config and handles polling for updates.
+   * Fetches the current flight search configuration from AppConfig. The Lambda extension caches the
+   * config and handles polling for updates.
    *
    * @return the parsed FlightSearchConfig
    * @throws RuntimeException if the config cannot be fetched or parsed
    */
   public FlightSearchConfig fetchConfig() {
-    String url = String.format("%s/applications/%s/environments/%s/configurations/%s",
-        EXTENSION_URL, applicationId, environmentId, configProfileId);
+    String url =
+        String.format(
+            "%s/applications/%s/environments/%s/configurations/%s",
+            EXTENSION_URL, applicationId, environmentId, configProfileId);
 
     log.info("Fetching config from AppConfig extension: {}", url);
 
     try {
-      HttpRequest request = HttpRequest.newBuilder()
-          .uri(URI.create(url))
-          .timeout(TIMEOUT)
-          .GET()
-          .build();
+      HttpRequest request =
+          HttpRequest.newBuilder().uri(URI.create(url)).timeout(TIMEOUT).GET().build();
 
-      HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
       if (response.statusCode() != 200) {
         throw new RuntimeException("AppConfig returned HTTP " + response.statusCode());
       }
 
       FlightSearchConfig config = gson.fromJson(response.body(), FlightSearchConfig.class);
-      log.info("Loaded config: routes={}, maxPrice={}, currency={}",
+      log.info(
+          "Loaded config: routes={}, maxPrice={}, currency={}",
           config.getSearch().getRoutes(),
           config.getSearch().getMaxPricePerFlight(),
           config.getApi().getCurrency());

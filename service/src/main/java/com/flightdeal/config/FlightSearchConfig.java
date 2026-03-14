@@ -2,14 +2,13 @@ package com.flightdeal.config;
 
 import com.google.gson.annotations.SerializedName;
 import java.util.List;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 /**
- * Configuration loaded from AWS AppConfig.
- * Maps to the JSON structure in infra/lib/config/*.json.
+ * Configuration loaded from AWS AppConfig. Maps to the JSON structure in infra/lib/config/*.json.
  */
 @Data
 @Builder

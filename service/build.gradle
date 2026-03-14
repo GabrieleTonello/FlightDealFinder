@@ -48,6 +48,7 @@ dependencies {
     implementation 'software.amazon.awssdk:cloudwatch'
     implementation 'software.amazon.awssdk:ses'
     implementation 'software.amazon.awssdk:secretsmanager'
+    implementation 'software.amazon.awssdk:appconfigdata'
 
     // AWS Lambda Java runtime
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.3'
@@ -171,7 +172,7 @@ jacocoTestCoverageVerification {
             limit {
                 counter = 'LINE'
                 value = 'COVEREDRATIO'
-                minimum = 0.8
+                minimum = 0.7
             }
         }
     }

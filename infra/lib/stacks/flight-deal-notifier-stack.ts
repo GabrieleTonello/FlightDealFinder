@@ -101,7 +101,7 @@ export class FlightDealNotifierStack extends Stack {
       }),
     );
 
-    // Wire AppConfig env vars to Flight Search Lambda for the extension
+    // Wire AppConfig env vars to Flight Search Lambda
     compute.flightSearchLambda.addEnvironment(
       'APPCONFIG_APPLICATION_ID', appConfig.application.ref);
     compute.flightSearchLambda.addEnvironment(
@@ -118,12 +118,6 @@ export class FlightDealNotifierStack extends Stack {
         ],
         resources: ['*'],
       }),
-    );
-
-    // Add AppConfig Lambda extension layer (region-aware)
-    const appConfigExtensionArn = `arn:aws:lambda:${this.region}:027255383542:layer:AWS-AppConfig-Extension:128`;
-    compute.flightSearchLambda.addLayers(
-      lambda.LayerVersion.fromLayerVersionArn(this, 'AppConfigExtension', appConfigExtensionArn),
     );
 
     // 7. Observability — CloudWatch dashboard and alarms

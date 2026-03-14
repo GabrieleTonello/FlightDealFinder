@@ -4,6 +4,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as sns from 'aws-cdk-lib/aws-sns';
+import { WORKFLOW } from '../configuration/constants';
 
 export interface WorkflowConstructProps {
   /** Lambda invoked for calendar availability lookup */
@@ -14,6 +15,8 @@ export interface WorkflowConstructProps {
   readonly notificationLambda: lambda.IFunction;
   /** SNS topic for publishing workflow failure events (Req 10.3) */
   readonly failureTopic?: sns.ITopic;
+  /** Deployment stage name */
+  readonly stage: string;
 }
 
 export class WorkflowConstruct extends Construct {
@@ -126,7 +129,7 @@ export class WorkflowConstruct extends Construct {
 
     // Standard Workflow state machine (Req 10.1, 10.2, 10.3)
     this.stateMachine = new sfn.StateMachine(this, 'MatchingWorkflow', {
-      stateMachineName: 'FlightDealMatchingWorkflow',
+      stateMachineName: WORKFLOW.stateMachineName(props.stage),
       stateMachineType: sfn.StateMachineType.STANDARD,
       definitionBody: sfn.DefinitionBody.fromChainable(definition),
       timeout: Duration.minutes(15),

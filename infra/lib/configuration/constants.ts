@@ -31,16 +31,16 @@ export const WORKFLOW_STEP_LAMBDA = {
 
 // ---- DynamoDB Configuration ----
 export const DYNAMODB = {
-  tableName: 'FlightPriceHistory',
+  tableName: (stage: string) => `FlightPriceHistory-${stage}`,
   partitionKey: 'destination',
   sortKey: 'timestamp',
 } as const;
 
 // ---- Messaging Configuration ----
 export const MESSAGING = {
-  topicName: 'FlightDealTopic',
-  queueName: 'FlightDealQueue',
-  dlqName: 'FlightDealDLQ',
+  topicName: (stage: string) => `FlightDealTopic-${stage}`,
+  queueName: (stage: string) => `FlightDealQueue-${stage}`,
+  dlqName: (stage: string) => `FlightDealDLQ-${stage}`,
   visibilityTimeoutSeconds: 720, // 6x Workflow Trigger Lambda timeout
   maxReceiveCount: 3,
   dlqRetentionDays: 14,
@@ -54,7 +54,7 @@ export const SCHEDULING = {
 
 // ---- Step Functions Configuration ----
 export const WORKFLOW = {
-  stateMachineName: 'FlightDealMatchingWorkflow',
+  stateMachineName: (stage: string) => `FlightDealMatchingWorkflow-${stage}`,
   retryIntervalSeconds: 2,
   retryBackoffRate: 2,
   calendarMaxRetries: 3,
@@ -73,18 +73,18 @@ export const ALARM_THRESHOLDS = {
 
 // ---- Alarm Names ----
 export const ALARM_NAMES = {
-  dlqNonEmpty: 'FlightDeal-DLQ-NonEmpty',
-  flightSearchErrorRate: 'FlightDeal-FlightSearch-ErrorRate',
-  workflowFailures: 'FlightDeal-Workflow-Failures',
-  dealQueueAge: 'FlightDeal-DealQueue-MessageAge',
+  dlqNonEmpty: (stage: string) => `FlightDeal-DLQ-NonEmpty-${stage}`,
+  flightSearchErrorRate: (stage: string) => `FlightDeal-FlightSearch-ErrorRate-${stage}`,
+  workflowFailures: (stage: string) => `FlightDeal-Workflow-Failures-${stage}`,
+  dealQueueAge: (stage: string) => `FlightDeal-DealQueue-MessageAge-${stage}`,
 } as const;
 
 // ---- Alerting ----
 export const ALERTING = {
-  topicName: 'FlightDealAlertingTopic',
+  topicName: (stage: string) => `FlightDealAlertingTopic-${stage}`,
 } as const;
 
 // ---- Dashboard ----
 export const DASHBOARD = {
-  name: 'FlightDealNotifier',
+  name: (stage: string) => `FlightDealNotifier-${stage}`,
 } as const;

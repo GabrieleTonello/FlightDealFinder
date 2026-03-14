@@ -16,6 +16,7 @@ export interface ObservabilityConstructProps {
   readonly deadLetterQueue: sqs.IQueue;
   readonly table: dynamodb.ITable;
   readonly stateMachine: sfn.IStateMachine;
+  readonly stage: string;
 }
 
 export class ObservabilityConstruct extends Construct {
@@ -26,13 +27,13 @@ export class ObservabilityConstruct extends Construct {
     super(scope, id);
 
     this.alertingTopic = new sns.Topic(this, 'AlertingTopic', {
-      topicName: ALERTING.topicName,
+      topicName: ALERTING.topicName(props.stage),
     });
 
     const alarmAction = new cloudwatchActions.SnsAction(this.alertingTopic);
 
     const dlqAlarm = new cloudwatch.Alarm(this, 'DlqMessageCountAlarm', {
-      alarmName: ALARM_NAMES.dlqNonEmpty,
+      alarmName: ALARM_NAMES.dlqNonEmpty(props.stage),
       alarmDescription: 'Dead Letter Queue has messages — indicates processing failures',
       metric: props.deadLetterQueue.metricApproximateNumberOfMessagesVisible({
         period: Duration.minutes(1),
@@ -55,7 +56,7 @@ export class ObservabilityConstruct extends Construct {
     });
 
     const flightSearchErrorAlarm = new cloudwatch.Alarm(this, 'FlightSearchErrorRateAlarm', {
-      alarmName: ALARM_NAMES.flightSearchErrorRate,
+      alarmName: ALARM_NAMES.flightSearchErrorRate(props.stage),
       alarmDescription: 'Flight Search Lambda error rate exceeds threshold over 1 hour',
       metric: flightSearchErrorRate,
       threshold: ALARM_THRESHOLDS.lambdaErrorRatePercent,
@@ -66,7 +67,7 @@ export class ObservabilityConstruct extends Construct {
     flightSearchErrorAlarm.addAlarmAction(alarmAction);
 
     const workflowFailureAlarm = new cloudwatch.Alarm(this, 'WorkflowFailureAlarm', {
-      alarmName: ALARM_NAMES.workflowFailures,
+      alarmName: ALARM_NAMES.workflowFailures(props.stage),
       alarmDescription: 'Matching Workflow has failures in the last hour',
       metric: props.stateMachine.metricFailed({ period: Duration.hours(1), statistic: 'Sum' }),
       threshold: ALARM_THRESHOLDS.workflowFailureCount,
@@ -77,7 +78,7 @@ export class ObservabilityConstruct extends Construct {
     workflowFailureAlarm.addAlarmAction(alarmAction);
 
     const queueAgeAlarm = new cloudwatch.Alarm(this, 'DealQueueAgeAlarm', {
-      alarmName: ALARM_NAMES.dealQueueAge,
+      alarmName: ALARM_NAMES.dealQueueAge(props.stage),
       alarmDescription: 'Deal Queue oldest message age exceeds threshold',
       metric: props.dealQueue.metricApproximateAgeOfOldestMessage({ period: Duration.minutes(5), statistic: 'Maximum' }),
       threshold: ALARM_THRESHOLDS.queueAgeSeconds,
@@ -88,7 +89,7 @@ export class ObservabilityConstruct extends Construct {
     queueAgeAlarm.addAlarmAction(alarmAction);
 
     this.dashboard = new cloudwatch.Dashboard(this, 'FlightDealDashboard', {
-      dashboardName: DASHBOARD.name,
+      dashboardName: DASHBOARD.name(props.stage),
     });
 
     this.dashboard.addWidgets(

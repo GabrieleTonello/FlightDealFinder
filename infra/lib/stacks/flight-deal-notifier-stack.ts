@@ -30,10 +30,14 @@ export class FlightDealNotifierStack extends Stack {
     });
 
     // 2. Data Store — DynamoDB table for flight price history
-    const dataStore = new DataStoreConstruct(this, 'DataStore');
+    const dataStore = new DataStoreConstruct(this, 'DataStore', {
+      stage: props.stage,
+    });
 
     // 2. Messaging — SNS topic, SQS deal queue, DLQ
-    const messaging = new MessagingConstruct(this, 'Messaging');
+    const messaging = new MessagingConstruct(this, 'Messaging', {
+      stage: props.stage,
+    });
 
     // 3. Compute — Flight Search Lambda + Workflow Trigger Lambda
     //    stateMachineArn is wired after WorkflowConstruct is created (see below)
@@ -87,6 +91,7 @@ export class FlightDealNotifierStack extends Stack {
       matcherLambda,
       notificationLambda,
       failureTopic: messaging.dealTopic,
+      stage: props.stage,
     });
 
     // Wire state machine ARN back to Workflow Trigger Lambda (resolves circular dependency)
@@ -128,6 +133,7 @@ export class FlightDealNotifierStack extends Stack {
       deadLetterQueue: messaging.deadLetterQueue,
       table: dataStore.flightPriceHistoryTable,
       stateMachine: workflow.stateMachine,
+      stage: props.stage,
     });
   }
 }

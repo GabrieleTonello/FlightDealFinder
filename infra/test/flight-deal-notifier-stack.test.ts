@@ -6,7 +6,7 @@ let template: Template;
 
 beforeAll(() => {
   const app = new cdk.App();
-  const stack = new FlightDealNotifierStack(app, 'TestStack');
+  const stack = new FlightDealNotifierStack(app, 'TestStack', { stage: 'dev' });
   template = Template.fromStack(stack);
 });
 

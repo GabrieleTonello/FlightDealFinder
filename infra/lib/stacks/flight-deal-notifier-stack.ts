@@ -10,6 +10,10 @@ import { WorkflowConstruct } from '../constructs/workflow';
 import { ObservabilityConstruct } from '../constructs/observability';
 import { AppConfigConstruct } from '../constructs/appconfig';
 
+export interface FlightDealNotifierStackProps extends StackProps {
+  readonly stage: string;
+}
+
 /**
  * Main stack composing all Flight Deal Notifier constructs.
  * Wires cross-construct references (Lambda ARNs, queue URLs, topic ARNs, state machine ARN).
@@ -17,12 +21,12 @@ import { AppConfigConstruct } from '../constructs/appconfig';
  * Requirements: 13.1, 13.2, 15.1
  */
 export class FlightDealNotifierStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, props: FlightDealNotifierStackProps) {
     super(scope, id, props);
 
     // 1. AppConfig — dynamic configuration for flight search settings
     const appConfig = new AppConfigConstruct(this, 'AppConfig', {
-      stage: 'dev',
+      stage: props.stage,
     });
 
     // 2. Data Store — DynamoDB table for flight price history

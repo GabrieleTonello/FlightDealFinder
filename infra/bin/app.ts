@@ -9,7 +9,7 @@ new FlightDealPipeline(app, 'FlightDealPipeline', {
   githubRepo: 'flight-deal-notifier',
   githubBranch: 'main',
   env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
+    account: '976193231624',
     region: 'us-east-1',
   },
 });

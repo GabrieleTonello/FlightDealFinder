@@ -4,6 +4,7 @@ package com.flightdeal.property;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.flightdeal.config.FlightSearchConfig;
 import com.flightdeal.dao.PriceRecordEntity;
 import com.flightdeal.generated.model.Airport;
 import com.flightdeal.generated.model.CarbonEmissions;
@@ -32,10 +33,35 @@ class DealExtractionPropertyTest {
 
     FlightSearchHandler handler =
         new FlightSearchHandler(
-            null, null, null, null, null, List.of(), "2025-07-01", "2025-07-15");
+            null,
+            null,
+            null,
+            null,
+            null,
+            FlightSearchConfig.builder()
+                .api(
+                    FlightSearchConfig.ApiConfig.builder()
+                        .currency("EUR")
+                        .language("en")
+                        .travelClass(1)
+                        .adults(1)
+                        .build())
+                .search(
+                    FlightSearchConfig.SearchConfig.builder()
+                        .routes(List.of())
+                        .maxPricePerFlight(1000)
+                        .maxStops(2)
+                        .build())
+                .notification(
+                    FlightSearchConfig.NotificationConfig.builder()
+                        .recipientEmail("test@test.com")
+                        .senderEmail("sender@test.com")
+                        .build())
+                .build());
 
     List<PriceRecordEntity> entities =
-        handler.parseFlights(response, depId + "-" + arrId, depId, arrId);
+        handler.parseFlights(
+            response, depId + "-" + arrId, depId, arrId, "2025-07-01", "2025-07-15");
 
     assertTrue(entities.size() >= 1);
     PriceRecordEntity entity = entities.get(0);

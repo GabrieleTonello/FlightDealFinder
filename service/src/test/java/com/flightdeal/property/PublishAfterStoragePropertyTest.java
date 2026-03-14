@@ -3,8 +3,11 @@ package com.flightdeal.property;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.flightdeal.config.FlightSearchConfig;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.generated.model.Airport;
 import com.flightdeal.generated.model.FlightDeal;
@@ -39,7 +42,7 @@ class PublishAfterStoragePropertyTest {
 
     for (String route : routes) {
       String[] parts = route.split("-");
-      when(flightApiClient.searchFlights(parts[0], parts[1], "2025-07-01", "2025-07-15"))
+      when(flightApiClient.searchFlights(eq(parts[0]), eq(parts[1]), anyString(), anyString()))
           .thenReturn(new FlightSearchResponse(List.of(sampleFlight), List.of(), rawResponse));
     }
 
@@ -50,9 +53,26 @@ class PublishAfterStoragePropertyTest {
             snsClient,
             metricsEmitter,
             "arn:aws:sns:us-east-1:123456789:TestTopic",
-            routes,
-            "2025-07-01",
-            "2025-07-15");
+            FlightSearchConfig.builder()
+                .api(
+                    FlightSearchConfig.ApiConfig.builder()
+                        .currency("EUR")
+                        .language("en")
+                        .travelClass(1)
+                        .adults(1)
+                        .build())
+                .search(
+                    FlightSearchConfig.SearchConfig.builder()
+                        .routes(routes)
+                        .maxPricePerFlight(1000)
+                        .maxStops(2)
+                        .build())
+                .notification(
+                    FlightSearchConfig.NotificationConfig.builder()
+                        .recipientEmail("test@test.com")
+                        .senderEmail("sender@test.com")
+                        .build())
+                .build());
 
     handler.handleRequest(new Object(), null);
 

@@ -41,6 +41,7 @@ export class FlightDealNotifierStack extends Stack {
       table: dataStore.flightPriceHistoryTable,
       topic: messaging.dealTopic,
       queue: messaging.dealQueue,
+      stage: props.stage,
     });
 
     // 4. Scheduling — EventBridge hourly rule targeting Flight Search Lambda
@@ -54,7 +55,7 @@ export class FlightDealNotifierStack extends Stack {
     const codePath = lambda.Code.fromAsset('../service/build/libs/');
 
     const calendarLambda = new lambda.Function(this, 'CalendarServiceLambda', {
-      functionName: 'CalendarServiceLambda',
+      functionName: `CalendarServiceLambda-${props.stage}`,
       runtime: lambda.Runtime.JAVA_17,
       handler: 'com.flightdeal.service.CalendarService',
       code: codePath,
@@ -63,7 +64,7 @@ export class FlightDealNotifierStack extends Stack {
     });
 
     const matcherLambda = new lambda.Function(this, 'FlightMatcherLambda', {
-      functionName: 'FlightMatcherLambda',
+      functionName: `FlightMatcherLambda-${props.stage}`,
       runtime: lambda.Runtime.JAVA_17,
       handler: 'com.flightdeal.service.FlightMatcher',
       code: codePath,
@@ -72,7 +73,7 @@ export class FlightDealNotifierStack extends Stack {
     });
 
     const notificationLambda = new lambda.Function(this, 'NotificationServiceLambda', {
-      functionName: 'NotificationServiceLambda',
+      functionName: `NotificationServiceLambda-${props.stage}`,
       runtime: lambda.Runtime.JAVA_17,
       handler: 'com.flightdeal.service.NotificationService',
       code: codePath,

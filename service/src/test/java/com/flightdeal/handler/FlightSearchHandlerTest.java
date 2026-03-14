@@ -3,8 +3,11 @@ package com.flightdeal.handler;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.flightdeal.config.FlightSearchConfig;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.dao.PriceRecordEntity;
 import com.flightdeal.generated.model.Airport;
@@ -38,10 +41,31 @@ class FlightSearchHandlerTest {
   @Mock private MetricsEmitter metricsEmitter;
 
   private static final String TOPIC_ARN = "arn:aws:sns:us-east-1:123456789:DealTopic";
-  private static final String OUTBOUND_DATE = "2025-07-01";
-  private static final String RETURN_DATE = "2025-07-15";
 
   private FlightSearchHandler handler;
+
+  private static FlightSearchConfig createConfig(List<String> routes) {
+    return FlightSearchConfig.builder()
+        .api(
+            FlightSearchConfig.ApiConfig.builder()
+                .currency("EUR")
+                .language("en")
+                .travelClass(1)
+                .adults(1)
+                .build())
+        .search(
+            FlightSearchConfig.SearchConfig.builder()
+                .routes(routes)
+                .maxPricePerFlight(1000)
+                .maxStops(2)
+                .build())
+        .notification(
+            FlightSearchConfig.NotificationConfig.builder()
+                .recipientEmail("test@test.com")
+                .senderEmail("sender@test.com")
+                .build())
+        .build();
+  }
 
   @BeforeEach
   void setUp() {
@@ -55,9 +79,7 @@ class FlightSearchHandlerTest {
         snsClient,
         metricsEmitter,
         TOPIC_ARN,
-        routes,
-        OUTBOUND_DATE,
-        RETURN_DATE);
+        createConfig(routes));
   }
 
   static FlightDeal flightNode(
@@ -111,9 +133,9 @@ class FlightSearchHandlerTest {
     FlightDeal jfkCdg = sampleFlight("JFK", "CDG", 299);
     FlightDeal laxNrt = sampleFlight("LAX", "NRT", 899);
 
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(jfkCdg), List.of()));
-    when(flightApiClient.searchFlights("LAX", "NRT", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("LAX"), eq("NRT"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(laxNrt), List.of()));
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());
@@ -131,9 +153,9 @@ class FlightSearchHandlerTest {
   @Test
   void handleRequest_partialFailure_continuesWithSuccessfulRoutes() throws Exception {
     FlightDeal jfkCdg = sampleFlight("JFK", "CDG", 299);
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(jfkCdg), List.of()));
-    when(flightApiClient.searchFlights("LAX", "NRT", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("LAX"), eq("NRT"), anyString(), anyString()))
         .thenThrow(new FlightApiException("LAX->NRT", "API error", "HTTP_ERROR"));
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());
@@ -148,9 +170,9 @@ class FlightSearchHandlerTest {
 
   @Test
   void handleRequest_allRoutesFail_noSaveNoPublish() throws Exception {
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenThrow(new FlightApiException("JFK->CDG", "timeout", "TIMEOUT"));
-    when(flightApiClient.searchFlights("LAX", "NRT", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("LAX"), eq("NRT"), anyString(), anyString()))
         .thenThrow(new FlightApiException("LAX->NRT", "error", "HTTP_ERROR"));
 
     Map<String, Object> result = handler.handleRequest(null, null);
@@ -163,9 +185,9 @@ class FlightSearchHandlerTest {
 
   @Test
   void handleRequest_emptyResults_skipsRoute() throws Exception {
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(), List.of()));
-    when(flightApiClient.searchFlights("LAX", "NRT", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("LAX"), eq("NRT"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(), List.of()));
 
     Map<String, Object> result = handler.handleRequest(null, null);
@@ -191,7 +213,7 @@ class FlightSearchHandlerTest {
             720,
             "AF001");
     handler = createHandler(List.of("JFK-CDG"));
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(flight), List.of()));
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());
@@ -215,15 +237,15 @@ class FlightSearchHandlerTest {
     assertEquals("AF001", entity.getFlightNumber());
     assertEquals("best", entity.getDealType());
     assertEquals(150000, entity.getCarbonEmissions());
-    assertEquals(OUTBOUND_DATE, entity.getOutboundDate());
-    assertEquals(RETURN_DATE, entity.getReturnDate());
+    assertNotNull(entity.getOutboundDate());
+    assertNotNull(entity.getReturnDate());
     assertNotNull(entity.getTimestamp());
   }
 
   @Test
   void handleRequest_snsPublishRetriesOnFailure() throws Exception {
     handler = createHandler(List.of("JFK-CDG"));
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(sampleFlight("JFK", "CDG", 299)), List.of()));
     when(snsClient.publish(any(PublishRequest.class)))
         .thenThrow(SnsException.builder().message("Temporary failure").build())
@@ -237,7 +259,7 @@ class FlightSearchHandlerTest {
   @Test
   void handleRequest_snsPublishExhaustsRetries() throws Exception {
     handler = createHandler(List.of("JFK-CDG"));
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(sampleFlight("JFK", "CDG", 299)), List.of()));
     when(snsClient.publish(any(PublishRequest.class)))
         .thenThrow(SnsException.builder().message("Persistent failure").build());
@@ -250,12 +272,12 @@ class FlightSearchHandlerTest {
 
   @Test
   void handleRequest_emitsCorrectMetrics() throws Exception {
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(
             responseWith(
                 List.of(sampleFlight("JFK", "CDG", 299), sampleFlight("JFK", "CDG", 350)),
                 List.of()));
-    when(flightApiClient.searchFlights("LAX", "NRT", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("LAX"), eq("NRT"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(sampleFlight("LAX", "NRT", 899)), List.of()));
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());
@@ -288,7 +310,7 @@ class FlightSearchHandlerTest {
     FlightSearchResponse response =
         new FlightSearchResponse(List.of(sampleFlight("JFK", "CDG", 299)), List.of(), rawJson);
     handler = createHandler(List.of("JFK-CDG"));
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(response);
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());
@@ -320,7 +342,7 @@ class FlightSearchHandlerTest {
 
     handler = createHandler(List.of("JFK-CDG"));
     FlightSearchResponse response = new FlightSearchResponse(List.of(flight), List.of(), "{}");
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(response);
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());
@@ -333,7 +355,9 @@ class FlightSearchHandlerTest {
   void parseFlightNode_emptyFlightsList_returnsNull() {
     FlightDeal flight = FlightDeal.builder().flights(List.of()).totalDuration(0).price(100).build();
 
-    PriceRecordEntity entity = handler.parseFlightNode(flight, "JFK-CDG", "2025-01-01", "best");
+    PriceRecordEntity entity =
+        handler.parseFlightNode(
+            flight, "JFK-CDG", "2025-01-01", "best", "2025-07-01", "2025-07-15");
     assertNull(entity);
   }
 
@@ -365,7 +389,9 @@ class FlightSearchHandlerTest {
             .carbonEmissions(CarbonEmissions.builder().build())
             .build();
 
-    PriceRecordEntity entity = handler.parseFlightNode(flight, "JFK-CDG", "2025-01-01", "best");
+    PriceRecordEntity entity =
+        handler.parseFlightNode(
+            flight, "JFK-CDG", "2025-01-01", "best", "2025-07-01", "2025-07-15");
     assertNotNull(entity);
     assertNull(entity.getCarbonEmissions());
   }
@@ -375,7 +401,7 @@ class FlightSearchHandlerTest {
     FlightDeal best = sampleFlight("JFK", "CDG", 299);
     FlightDeal other = sampleFlight("JFK", "CDG", 499);
     handler = createHandler(List.of("JFK-CDG"));
-    when(flightApiClient.searchFlights("JFK", "CDG", OUTBOUND_DATE, RETURN_DATE))
+    when(flightApiClient.searchFlights(eq("JFK"), eq("CDG"), anyString(), anyString()))
         .thenReturn(responseWith(List.of(best), List.of(other)));
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());

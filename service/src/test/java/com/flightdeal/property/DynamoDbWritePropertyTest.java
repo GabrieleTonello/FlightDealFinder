@@ -3,8 +3,11 @@ package com.flightdeal.property;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.flightdeal.config.FlightSearchConfig;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.dao.PriceRecordEntity;
 import com.flightdeal.generated.model.Airport;
@@ -46,7 +49,7 @@ class DynamoDbWritePropertyTest {
     MetricsEmitter metricsEmitter = mock(MetricsEmitter.class);
 
     FlightDeal deal = createFlight(price, airline, depId, arrId);
-    when(flightApiClient.searchFlights(depId, arrId, "2025-07-01", "2025-07-15"))
+    when(flightApiClient.searchFlights(eq(depId), eq(arrId), anyString(), anyString()))
         .thenReturn(new FlightSearchResponse(List.of(deal), List.of(), "{}"));
     when(snsClient.publish(any(PublishRequest.class)))
         .thenReturn(PublishResponse.builder().build());
@@ -58,9 +61,26 @@ class DynamoDbWritePropertyTest {
             snsClient,
             metricsEmitter,
             "arn:aws:sns:us-east-1:123456789:TestTopic",
-            List.of(route),
-            "2025-07-01",
-            "2025-07-15");
+            FlightSearchConfig.builder()
+                .api(
+                    FlightSearchConfig.ApiConfig.builder()
+                        .currency("EUR")
+                        .language("en")
+                        .travelClass(1)
+                        .adults(1)
+                        .build())
+                .search(
+                    FlightSearchConfig.SearchConfig.builder()
+                        .routes(List.of(route))
+                        .maxPricePerFlight(1000)
+                        .maxStops(2)
+                        .build())
+                .notification(
+                    FlightSearchConfig.NotificationConfig.builder()
+                        .recipientEmail("test@test.com")
+                        .senderEmail("sender@test.com")
+                        .build())
+                .build());
 
     handler.handleRequest(new Object(), null);
 

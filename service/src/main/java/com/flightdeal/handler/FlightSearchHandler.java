@@ -2,6 +2,7 @@ package com.flightdeal.handler;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.flightdeal.config.FlightSearchConfig;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.dao.PriceRecordEntity;
 import com.flightdeal.generated.model.Airport;
@@ -17,6 +18,7 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,17 +50,7 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
   @Named("TOPIC_ARN")
   private String topicArn;
 
-  @Inject
-  @Named("ROUTES")
-  private List<String> routes;
-
-  @Inject
-  @Named("OUTBOUND_DATE")
-  private String outboundDate;
-
-  @Inject
-  @Named("RETURN_DATE")
-  private String returnDate;
+  @Inject private FlightSearchConfig config;
 
   /**
    * No-arg constructor for Lambda runtime. Creates a Guice injector with FlightSearchModule and
@@ -76,17 +68,13 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
       SnsClient snsClient,
       MetricsEmitter metricsEmitter,
       @Named("TOPIC_ARN") String topicArn,
-      @Named("ROUTES") List<String> routes,
-      @Named("OUTBOUND_DATE") String outboundDate,
-      @Named("RETURN_DATE") String returnDate) {
+      FlightSearchConfig config) {
     this.flightApiClient = flightApiClient;
     this.priceRecordDao = priceRecordDao;
     this.snsClient = snsClient;
     this.metricsEmitter = metricsEmitter;
     this.topicArn = topicArn;
-    this.routes = routes;
-    this.outboundDate = outboundDate;
-    this.returnDate = returnDate;
+    this.config = config;
   }
 
   @Override
@@ -95,6 +83,10 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
     List<PriceRecordEntity> allEntities = new ArrayList<>();
     List<Map<String, String>> errors = new ArrayList<>();
     int totalFlights = 0;
+
+    List<String> routes = config.getSearch().getRoutes();
+    String outboundDate = LocalDate.now().plusDays(7).toString();
+    String returnDate = LocalDate.now().plusDays(14).toString();
 
     for (String route : routes) {
       String trimmedRoute = route.trim();
@@ -111,7 +103,7 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
             flightApiClient.searchFlights(departureId, arrivalId, outboundDate, returnDate);
 
         List<PriceRecordEntity> entities =
-            parseFlights(response, trimmedRoute, departureId, arrivalId);
+            parseFlights(response, trimmedRoute, departureId, arrivalId, outboundDate, returnDate);
         totalFlights += entities.size();
 
         if (!entities.isEmpty()) {
@@ -152,18 +144,25 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
   }
 
   public List<PriceRecordEntity> parseFlights(
-      FlightSearchResponse response, String route, String departureId, String arrivalId) {
+      FlightSearchResponse response,
+      String route,
+      String departureId,
+      String arrivalId,
+      String outboundDate,
+      String returnDate) {
     String timestamp = Instant.now().toString();
     List<PriceRecordEntity> entities = new ArrayList<>();
 
     for (FlightDeal deal : response.bestFlights()) {
-      PriceRecordEntity entity = parseFlightNode(deal, route, timestamp, "best");
+      PriceRecordEntity entity =
+          parseFlightNode(deal, route, timestamp, "best", outboundDate, returnDate);
       if (entity != null) {
         entities.add(entity);
       }
     }
     for (FlightDeal deal : response.otherFlights()) {
-      PriceRecordEntity entity = parseFlightNode(deal, route, timestamp, "other");
+      PriceRecordEntity entity =
+          parseFlightNode(deal, route, timestamp, "other", outboundDate, returnDate);
       if (entity != null) {
         entities.add(entity);
       }
@@ -172,7 +171,12 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
   }
 
   PriceRecordEntity parseFlightNode(
-      FlightDeal deal, String route, String timestamp, String dealType) {
+      FlightDeal deal,
+      String route,
+      String timestamp,
+      String dealType,
+      String outboundDate,
+      String returnDate) {
     try {
       int price = deal.getPrice();
       int totalDuration = deal.getTotalDuration();

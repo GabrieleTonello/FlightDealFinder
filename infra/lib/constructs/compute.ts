@@ -12,6 +12,7 @@ export interface ComputeConstructProps {
   readonly table: dynamodb.ITable;
   readonly topic: sns.ITopic;
   readonly queue: sqs.IQueue;
+  readonly stage: string;
   readonly stateMachineArn?: string;
 }
 
@@ -22,34 +23,45 @@ export class ComputeConstruct extends Construct {
   constructor(scope: Construct, id: string, props: ComputeConstructProps) {
     super(scope, id);
 
+    const codePath = lambda.Code.fromAsset('../service/build/libs/');
+
     this.flightSearchLambda = new lambda.Function(this, 'FlightSearchLambda', {
-      functionName: FLIGHT_SEARCH_LAMBDA.functionName,
+      functionName: `${FLIGHT_SEARCH_LAMBDA.functionName}-${props.stage}`,
       runtime: lambda.Runtime.JAVA_17,
       handler: FLIGHT_SEARCH_LAMBDA.handler,
-      code: lambda.Code.fromAsset('../service/build/libs/'),
+      code: codePath,
       memorySize: FLIGHT_SEARCH_LAMBDA.memorySize,
       timeout: Duration.seconds(FLIGHT_SEARCH_LAMBDA.timeoutSeconds),
       reservedConcurrentExecutions: FLIGHT_SEARCH_LAMBDA.reservedConcurrency,
       environment: {
         TABLE_NAME: props.table.tableName,
         TOPIC_ARN: props.topic.topicArn,
-        DESTINATIONS: '',
-        FLIGHT_API_BASE_URL: '',
-        FLIGHT_API_KEY: '',
+        SERPAPI_SECRET_NAME: 'serpapi-key',
       },
     });
 
     props.table.grantWriteData(this.flightSearchLambda);
     props.topic.grantPublish(this.flightSearchLambda);
+
+    // CloudWatch metrics + Secrets Manager read for API key
     this.flightSearchLambda.addToRolePolicy(
-      new iam.PolicyStatement({ actions: ['cloudwatch:PutMetricData'], resources: ['*'] }),
+      new iam.PolicyStatement({
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+      }),
+    );
+    this.flightSearchLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: ['*'],
+      }),
     );
 
     this.workflowTriggerLambda = new lambda.Function(this, 'WorkflowTriggerLambda', {
-      functionName: WORKFLOW_TRIGGER_LAMBDA.functionName,
+      functionName: `${WORKFLOW_TRIGGER_LAMBDA.functionName}-${props.stage}`,
       runtime: lambda.Runtime.JAVA_17,
       handler: WORKFLOW_TRIGGER_LAMBDA.handler,
-      code: lambda.Code.fromAsset('../service/build/libs/'),
+      code: codePath,
       memorySize: WORKFLOW_TRIGGER_LAMBDA.memorySize,
       timeout: Duration.seconds(WORKFLOW_TRIGGER_LAMBDA.timeoutSeconds),
       reservedConcurrentExecutions: WORKFLOW_TRIGGER_LAMBDA.reservedConcurrency,

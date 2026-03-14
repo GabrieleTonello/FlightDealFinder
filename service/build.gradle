@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'jacoco'
     id 'checkstyle'
+    id 'com.gradleup.shadow' version '8.3.6'
     id 'com.diffplug.spotless' version '7.0.2'
     id 'software.amazon.smithy.gradle.smithy-base' version '1.4.0'
 }
@@ -46,6 +47,7 @@ dependencies {
     implementation 'software.amazon.awssdk:sfn'
     implementation 'software.amazon.awssdk:cloudwatch'
     implementation 'software.amazon.awssdk:ses'
+    implementation 'software.amazon.awssdk:secretsmanager'
 
     // AWS Lambda Java runtime
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.3'
@@ -203,3 +205,12 @@ checkstyle {
 tasks.withType(Checkstyle).configureEach {
     exclude '**/generated/**'
 }
+
+// Shadow JAR for Lambda deployment — bundles all dependencies into a single JAR
+shadowJar {
+    archiveClassifier.set('')
+    mergeServiceFiles()
+}
+
+// Build produces the fat JAR
+build.dependsOn shadowJar

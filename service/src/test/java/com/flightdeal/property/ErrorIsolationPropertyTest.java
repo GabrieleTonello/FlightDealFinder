@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.flightdeal.config.FlightSearchConfig;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.generated.model.Airport;
 import com.flightdeal.generated.model.FlightDeal;
@@ -67,9 +68,26 @@ class ErrorIsolationPropertyTest {
             snsClient,
             metricsEmitter,
             "arn:aws:sns:us-east-1:123456789:TestTopic",
-            allRoutes,
-            "2025-07-01",
-            "2025-07-15");
+            FlightSearchConfig.builder()
+                .api(
+                    FlightSearchConfig.ApiConfig.builder()
+                        .currency("EUR")
+                        .language("en")
+                        .travelClass(1)
+                        .adults(1)
+                        .build())
+                .search(
+                    FlightSearchConfig.SearchConfig.builder()
+                        .routes(allRoutes)
+                        .maxPricePerFlight(1000)
+                        .maxStops(2)
+                        .build())
+                .notification(
+                    FlightSearchConfig.NotificationConfig.builder()
+                        .recipientEmail("test@test.com")
+                        .senderEmail("sender@test.com")
+                        .build())
+                .build());
 
     Map<String, Object> result = handler.handleRequest(new Object(), null);
 

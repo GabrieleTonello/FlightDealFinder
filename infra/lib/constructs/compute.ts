@@ -28,7 +28,7 @@ export class ComputeConstruct extends Construct {
 
     this.flightSearchLambda = new lambda.Function(this, 'FlightSearchLambda', {
       functionName: `${FLIGHT_SEARCH_LAMBDA.functionName}-${props.stage}`,
-      runtime: lambda.Runtime.JAVA_17,
+      runtime: lambda.Runtime.JAVA_21,
       handler: FLIGHT_SEARCH_LAMBDA.handler,
       code: codePath,
       memorySize: FLIGHT_SEARCH_LAMBDA.memorySize,
@@ -67,7 +67,7 @@ export class ComputeConstruct extends Construct {
 
     this.workflowTriggerLambda = new lambda.Function(this, 'WorkflowTriggerLambda', {
       functionName: `${WORKFLOW_TRIGGER_LAMBDA.functionName}-${props.stage}`,
-      runtime: lambda.Runtime.JAVA_17,
+      runtime: lambda.Runtime.JAVA_21,
       handler: WORKFLOW_TRIGGER_LAMBDA.handler,
       code: codePath,
       memorySize: WORKFLOW_TRIGGER_LAMBDA.memorySize,

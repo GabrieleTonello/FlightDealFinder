@@ -61,7 +61,7 @@ export class FlightDealNotifierStack extends Stack {
 
     const calendarLambda = new lambda.Function(this, 'CalendarServiceLambda', {
       functionName: `CalendarServiceLambda-${props.stage}`,
-      runtime: lambda.Runtime.JAVA_17,
+      runtime: lambda.Runtime.JAVA_21,
       handler: 'com.flightdeal.service.CalendarService',
       code: codePath,
       memorySize: 512,
@@ -70,7 +70,7 @@ export class FlightDealNotifierStack extends Stack {
 
     const matcherLambda = new lambda.Function(this, 'FlightMatcherLambda', {
       functionName: `FlightMatcherLambda-${props.stage}`,
-      runtime: lambda.Runtime.JAVA_17,
+      runtime: lambda.Runtime.JAVA_21,
       handler: 'com.flightdeal.service.FlightMatcher',
       code: codePath,
       memorySize: 512,
@@ -79,7 +79,7 @@ export class FlightDealNotifierStack extends Stack {
 
     const notificationLambda = new lambda.Function(this, 'NotificationServiceLambda', {
       functionName: `NotificationServiceLambda-${props.stage}`,
-      runtime: lambda.Runtime.JAVA_17,
+      runtime: lambda.Runtime.JAVA_21,
       handler: 'com.flightdeal.service.NotificationService',
       code: codePath,
       memorySize: 512,

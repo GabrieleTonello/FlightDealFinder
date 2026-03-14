@@ -4,23 +4,19 @@ package com.flightdeal.property;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.dao.PriceRecordEntity;
 import com.flightdeal.handler.FlightSearchHandler;
 import com.flightdeal.proxy.FlightSearchResponse;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import java.util.List;
 import net.jqwik.api.*;
 
 /**
- * Property 2: For any valid flight JsonNode, the parsed PriceRecordEntity has all required fields
+ * Property 2: For any valid flight JsonObject, the parsed PriceRecordEntity has all required fields
  * non-null.
  */
 class DealExtractionPropertyTest {
-
-  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Property(tries = 100)
   void dealExtractionPreservesAllFields(
@@ -29,7 +25,7 @@ class DealExtractionPropertyTest {
       @ForAll("validAirportId") String depId,
       @ForAll("validAirportId") String arrId) {
 
-    JsonNode flight = createFlight(price, airline, depId, arrId);
+    JsonObject flight = createFlight(price, airline, depId, arrId);
     FlightSearchResponse response = new FlightSearchResponse(List.of(flight), List.of(), "{}");
 
     FlightSearchHandler handler =
@@ -66,34 +62,34 @@ class DealExtractionPropertyTest {
     return Arbitraries.of("JFK", "CDG", "LAX", "NRT", "LHR", "FRA", "SYD", "DXB");
   }
 
-  private static JsonNode createFlight(int price, String airline, String depId, String arrId) {
-    ObjectNode flight = MAPPER.createObjectNode();
-    flight.put("price", price);
-    flight.put("total_duration", 480);
+  private static JsonObject createFlight(int price, String airline, String depId, String arrId) {
+    JsonObject flight = new JsonObject();
+    flight.addProperty("price", price);
+    flight.addProperty("total_duration", 480);
 
-    ArrayNode flights = MAPPER.createArrayNode();
-    ObjectNode segment = MAPPER.createObjectNode();
+    JsonArray flights = new JsonArray();
+    JsonObject segment = new JsonObject();
 
-    ObjectNode dep = MAPPER.createObjectNode();
-    dep.put("id", depId);
-    dep.put("name", depId + " Airport");
-    dep.put("time", "2025-07-01 10:00");
-    segment.set("departure_airport", dep);
+    JsonObject dep = new JsonObject();
+    dep.addProperty("id", depId);
+    dep.addProperty("name", depId + " Airport");
+    dep.addProperty("time", "2025-07-01 10:00");
+    segment.add("departure_airport", dep);
 
-    ObjectNode arr = MAPPER.createObjectNode();
-    arr.put("id", arrId);
-    arr.put("name", arrId + " Airport");
-    arr.put("time", "2025-07-01 18:00");
-    segment.set("arrival_airport", arr);
+    JsonObject arr = new JsonObject();
+    arr.addProperty("id", arrId);
+    arr.addProperty("name", arrId + " Airport");
+    arr.addProperty("time", "2025-07-01 18:00");
+    segment.add("arrival_airport", arr);
 
-    segment.put("airline", airline);
-    segment.put("flight_number", "XX100");
+    segment.addProperty("airline", airline);
+    segment.addProperty("flight_number", "XX100");
     flights.add(segment);
-    flight.set("flights", flights);
+    flight.add("flights", flights);
 
-    ObjectNode carbon = MAPPER.createObjectNode();
-    carbon.put("this_flight", 150000);
-    flight.set("carbon_emissions", carbon);
+    JsonObject carbon = new JsonObject();
+    carbon.addProperty("this_flight", 150000);
+    flight.add("carbon_emissions", carbon);
 
     return flight;
   }

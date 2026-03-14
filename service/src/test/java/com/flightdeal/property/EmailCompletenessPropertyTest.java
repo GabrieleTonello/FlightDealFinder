@@ -5,11 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.service.NotificationService;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.jqwik.api.*;
@@ -24,8 +22,6 @@ import software.amazon.awssdk.services.ses.model.SendEmailResponse;
  */
 class EmailCompletenessPropertyTest {
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-
   @Property(tries = 100)
   void emailBodyContainsAllFlightFields(@ForAll("flightList") List<FlightInput> flightInputs) {
     SesClient sesClient = mock(SesClient.class);
@@ -35,7 +31,7 @@ class EmailCompletenessPropertyTest {
     NotificationService service =
         new NotificationService(sesClient, "sender@test.com", "recipient@test.com");
 
-    List<JsonNode> flights =
+    List<JsonObject> flights =
         flightInputs.stream()
             .map(input -> createFlight(input.price, input.airline, input.depName, input.arrName))
             .collect(Collectors.toList());
@@ -86,25 +82,26 @@ class EmailCompletenessPropertyTest {
 
   record FlightInput(int price, String airline, String depName, String arrName) {}
 
-  private static JsonNode createFlight(int price, String airline, String depName, String arrName) {
-    ObjectNode flight = MAPPER.createObjectNode();
-    flight.put("price", price);
-    flight.put("total_duration", 480);
-    ArrayNode flights = MAPPER.createArrayNode();
-    ObjectNode segment = MAPPER.createObjectNode();
-    ObjectNode dep = MAPPER.createObjectNode();
-    dep.put("id", "DEP");
-    dep.put("name", depName);
-    dep.put("time", "2025-07-01 10:00");
-    segment.set("departure_airport", dep);
-    ObjectNode arr = MAPPER.createObjectNode();
-    arr.put("id", "ARR");
-    arr.put("name", arrName);
-    arr.put("time", "2025-07-01 18:00");
-    segment.set("arrival_airport", arr);
-    segment.put("airline", airline);
+  private static JsonObject createFlight(
+      int price, String airline, String depName, String arrName) {
+    JsonObject flight = new JsonObject();
+    flight.addProperty("price", price);
+    flight.addProperty("total_duration", 480);
+    JsonArray flights = new JsonArray();
+    JsonObject segment = new JsonObject();
+    JsonObject dep = new JsonObject();
+    dep.addProperty("id", "DEP");
+    dep.addProperty("name", depName);
+    dep.addProperty("time", "2025-07-01 10:00");
+    segment.add("departure_airport", dep);
+    JsonObject arr = new JsonObject();
+    arr.addProperty("id", "ARR");
+    arr.addProperty("name", arrName);
+    arr.addProperty("time", "2025-07-01 18:00");
+    segment.add("arrival_airport", arr);
+    segment.addProperty("airline", airline);
     flights.add(segment);
-    flight.set("flights", flights);
+    flight.add("flights", flights);
     return flight;
   }
 }

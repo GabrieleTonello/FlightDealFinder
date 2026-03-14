@@ -5,14 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.generated.model.TimeWindow;
 import com.flightdeal.proxy.CalendarApiException;
 import com.flightdeal.proxy.GoogleCalendarClient;
 import com.flightdeal.service.CalendarService;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,8 +23,6 @@ import org.mockito.ArgumentCaptor;
  */
 class CalendarDateRangePropertyTest {
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-
   @Property(tries = 100)
   void calendarQuerySpansMinDepartureToMaxArrival(@ForAll("flightList") List<FlightDates> dates)
       throws CalendarApiException {
@@ -38,7 +34,7 @@ class CalendarDateRangePropertyTest {
 
     CalendarService calendarService = new CalendarService(googleCalendarClient);
 
-    List<JsonNode> flights =
+    List<JsonObject> flights =
         dates.stream()
             .map(dd -> createFlight(dd.departure, dd.arrival))
             .collect(Collectors.toList());
@@ -77,24 +73,24 @@ class CalendarDateRangePropertyTest {
 
   record FlightDates(String departure, String arrival) {}
 
-  private static JsonNode createFlight(String depDate, String arrDate) {
-    ObjectNode flight = MAPPER.createObjectNode();
-    flight.put("price", 200);
-    ArrayNode flights = MAPPER.createArrayNode();
-    ObjectNode segment = MAPPER.createObjectNode();
-    ObjectNode dep = MAPPER.createObjectNode();
-    dep.put("id", "JFK");
-    dep.put("name", "JFK Airport");
-    dep.put("time", depDate + " 10:00");
-    segment.set("departure_airport", dep);
-    ObjectNode arr = MAPPER.createObjectNode();
-    arr.put("id", "CDG");
-    arr.put("name", "CDG Airport");
-    arr.put("time", arrDate + " 18:00");
-    segment.set("arrival_airport", arr);
-    segment.put("airline", "TestAir");
+  private static JsonObject createFlight(String depDate, String arrDate) {
+    JsonObject flight = new JsonObject();
+    flight.addProperty("price", 200);
+    JsonArray flights = new JsonArray();
+    JsonObject segment = new JsonObject();
+    JsonObject dep = new JsonObject();
+    dep.addProperty("id", "JFK");
+    dep.addProperty("name", "JFK Airport");
+    dep.addProperty("time", depDate + " 10:00");
+    segment.add("departure_airport", dep);
+    JsonObject arr = new JsonObject();
+    arr.addProperty("id", "CDG");
+    arr.addProperty("name", "CDG Airport");
+    arr.addProperty("time", arrDate + " 18:00");
+    segment.add("arrival_airport", arr);
+    segment.addProperty("airline", "TestAir");
     flights.add(segment);
-    flight.set("flights", flights);
+    flight.add("flights", flights);
     return flight;
   }
 }

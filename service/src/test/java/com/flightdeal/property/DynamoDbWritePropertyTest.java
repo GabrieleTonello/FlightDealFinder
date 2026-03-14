@@ -5,16 +5,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.dao.PriceRecordEntity;
 import com.flightdeal.handler.FlightSearchHandler;
 import com.flightdeal.metrics.MetricsEmitter;
 import com.flightdeal.proxy.FlightApiClient;
 import com.flightdeal.proxy.FlightSearchResponse;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import java.util.List;
 import net.jqwik.api.*;
 import org.mockito.ArgumentCaptor;
@@ -23,12 +21,10 @@ import software.amazon.awssdk.services.sns.model.PublishRequest;
 import software.amazon.awssdk.services.sns.model.PublishResponse;
 
 /**
- * Property 4: For any flight JsonNode, the PriceRecordEntity passed to the DAO has correct
+ * Property 4: For any flight JsonObject, the PriceRecordEntity passed to the DAO has correct
  * partition key (route), sort key (timestamp), and all required fields.
  */
 class DynamoDbWritePropertyTest {
-
-  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Property(tries = 100)
   @SuppressWarnings("unchecked")
@@ -47,7 +43,7 @@ class DynamoDbWritePropertyTest {
     SnsClient snsClient = mock(SnsClient.class);
     MetricsEmitter metricsEmitter = mock(MetricsEmitter.class);
 
-    JsonNode flight = createFlight(price, airline, depId, arrId);
+    JsonObject flight = createFlight(price, airline, depId, arrId);
     when(flightApiClient.searchFlights(depId, arrId, "2025-07-01", "2025-07-15"))
         .thenReturn(new FlightSearchResponse(List.of(flight), List.of(), "{}"));
     when(snsClient.publish(any(PublishRequest.class)))
@@ -97,29 +93,29 @@ class DynamoDbWritePropertyTest {
     return Arbitraries.of("JFK-CDG", "LAX-NRT", "LHR-FRA", "SYD-DXB", "ORD-FCO");
   }
 
-  private static JsonNode createFlight(int price, String airline, String depId, String arrId) {
-    ObjectNode flight = MAPPER.createObjectNode();
-    flight.put("price", price);
-    flight.put("total_duration", 480);
-    ArrayNode flights = MAPPER.createArrayNode();
-    ObjectNode segment = MAPPER.createObjectNode();
-    ObjectNode dep = MAPPER.createObjectNode();
-    dep.put("id", depId);
-    dep.put("name", depId + " Airport");
-    dep.put("time", "2025-07-01 10:00");
-    segment.set("departure_airport", dep);
-    ObjectNode arr = MAPPER.createObjectNode();
-    arr.put("id", arrId);
-    arr.put("name", arrId + " Airport");
-    arr.put("time", "2025-07-01 18:00");
-    segment.set("arrival_airport", arr);
-    segment.put("airline", airline);
-    segment.put("flight_number", "XX100");
+  private static JsonObject createFlight(int price, String airline, String depId, String arrId) {
+    JsonObject flight = new JsonObject();
+    flight.addProperty("price", price);
+    flight.addProperty("total_duration", 480);
+    JsonArray flights = new JsonArray();
+    JsonObject segment = new JsonObject();
+    JsonObject dep = new JsonObject();
+    dep.addProperty("id", depId);
+    dep.addProperty("name", depId + " Airport");
+    dep.addProperty("time", "2025-07-01 10:00");
+    segment.add("departure_airport", dep);
+    JsonObject arr = new JsonObject();
+    arr.addProperty("id", arrId);
+    arr.addProperty("name", arrId + " Airport");
+    arr.addProperty("time", "2025-07-01 18:00");
+    segment.add("arrival_airport", arr);
+    segment.addProperty("airline", airline);
+    segment.addProperty("flight_number", "XX100");
     flights.add(segment);
-    flight.set("flights", flights);
-    ObjectNode carbon = MAPPER.createObjectNode();
-    carbon.put("this_flight", 150000);
-    flight.set("carbon_emissions", carbon);
+    flight.add("flights", flights);
+    JsonObject carbon = new JsonObject();
+    carbon.addProperty("this_flight", 150000);
+    flight.add("carbon_emissions", carbon);
     return flight;
   }
 }

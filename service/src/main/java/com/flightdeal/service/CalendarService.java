@@ -1,9 +1,10 @@
 package com.flightdeal.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.flightdeal.generated.model.TimeWindow;
 import com.flightdeal.proxy.CalendarApiException;
 import com.flightdeal.proxy.GoogleCalendarClient;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Service that retrieves free calendar windows for a set of flight deals (JsonNode). Computes the
+ * Service that retrieves free calendar windows for a set of flight deals (JsonObject). Computes the
  * date range from the earliest departure to the latest arrival across all deals, queries Google
  * Calendar, and returns free time windows.
  *
@@ -30,13 +31,13 @@ public class CalendarService {
   }
 
   /**
-   * Looks up free calendar windows for the date range spanned by the given flight JsonNodes.
+   * Looks up free calendar windows for the date range spanned by the given flight JsonObjects.
    *
-   * @param flights the list of flight deal JsonNodes to derive the date range from
+   * @param flights the list of flight deal JsonObjects to derive the date range from
    * @return list of free time windows from the user's calendar
    * @throws RuntimeException wrapping CalendarApiException on API failure
    */
-  public List<TimeWindow> lookupFreeWindows(List<JsonNode> flights) {
+  public List<TimeWindow> lookupFreeWindows(List<JsonObject> flights) {
     if (flights == null || flights.isEmpty()) {
       log.info("No flights provided, returning empty free windows");
       return List.of();
@@ -78,22 +79,37 @@ public class CalendarService {
     }
   }
 
-  private String extractDepartureDate(JsonNode flight) {
-    JsonNode flightsArray = flight.path("flights");
-    if (!flightsArray.isArray() || flightsArray.isEmpty()) {
+  private String extractDepartureDate(JsonObject flight) {
+    if (!flight.has("flights") || !flight.get("flights").isJsonArray()) {
       return null;
     }
-    String time = flightsArray.get(0).path("departure_airport").path("time").asText(null);
+    JsonArray flightsArray = flight.getAsJsonArray("flights");
+    if (flightsArray.size() == 0) {
+      return null;
+    }
+    JsonObject firstSegment = flightsArray.get(0).getAsJsonObject();
+    if (!firstSegment.has("departure_airport")) {
+      return null;
+    }
+    JsonObject depAirport = firstSegment.getAsJsonObject("departure_airport");
+    String time = depAirport.has("time") ? depAirport.get("time").getAsString() : null;
     return extractDatePart(time);
   }
 
-  private String extractArrivalDate(JsonNode flight) {
-    JsonNode flightsArray = flight.path("flights");
-    if (!flightsArray.isArray() || flightsArray.isEmpty()) {
+  private String extractArrivalDate(JsonObject flight) {
+    if (!flight.has("flights") || !flight.get("flights").isJsonArray()) {
       return null;
     }
-    String time =
-        flightsArray.get(flightsArray.size() - 1).path("arrival_airport").path("time").asText(null);
+    JsonArray flightsArray = flight.getAsJsonArray("flights");
+    if (flightsArray.size() == 0) {
+      return null;
+    }
+    JsonObject lastSegment = flightsArray.get(flightsArray.size() - 1).getAsJsonObject();
+    if (!lastSegment.has("arrival_airport")) {
+      return null;
+    }
+    JsonObject arrAirport = lastSegment.getAsJsonObject("arrival_airport");
+    String time = arrAirport.has("time") ? arrAirport.get("time").getAsString() : null;
     return extractDatePart(time);
   }
 

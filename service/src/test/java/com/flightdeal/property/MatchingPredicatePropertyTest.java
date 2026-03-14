@@ -3,33 +3,30 @@ package com.flightdeal.property;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.generated.model.TimeWindow;
 import com.flightdeal.service.FlightMatcher;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import java.time.LocalDate;
 import java.util.List;
 import net.jqwik.api.*;
 
 /**
- * Property 10: For any flight JsonNode and TimeWindow, the flight matches iff departure date >=
+ * Property 10: For any flight JsonObject and TimeWindow, the flight matches iff departure date >=
  * window.start AND arrival date <= window.end.
  */
 class MatchingPredicatePropertyTest {
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
   private final FlightMatcher flightMatcher = new FlightMatcher();
 
   @Property(tries = 100)
   void flightMatchesIffEntirelyWithinWindow(@ForAll("flightAndWindow") FlightAndWindow input) {
 
-    JsonNode flight = createFlight(input.departureDate, input.arrivalDate);
+    JsonObject flight = createFlight(input.departureDate, input.arrivalDate);
     TimeWindow window =
         TimeWindow.builder().startDate(input.windowStart).endDate(input.windowEnd).build();
 
-    List<JsonNode> result = flightMatcher.matchDeals(List.of(flight), List.of(window));
+    List<JsonObject> result = flightMatcher.matchDeals(List.of(flight), List.of(window));
 
     boolean departureOnOrAfterStart = input.departureDate.compareTo(input.windowStart) >= 0;
     boolean arrivalOnOrBeforeEnd = input.arrivalDate.compareTo(input.windowEnd) <= 0;
@@ -78,25 +75,25 @@ class MatchingPredicatePropertyTest {
   record FlightAndWindow(
       String departureDate, String arrivalDate, String windowStart, String windowEnd) {}
 
-  private static JsonNode createFlight(String depDate, String arrDate) {
-    ObjectNode flight = MAPPER.createObjectNode();
-    flight.put("price", 200);
-    flight.put("total_duration", 480);
-    ArrayNode flights = MAPPER.createArrayNode();
-    ObjectNode segment = MAPPER.createObjectNode();
-    ObjectNode dep = MAPPER.createObjectNode();
-    dep.put("id", "JFK");
-    dep.put("name", "JFK Airport");
-    dep.put("time", depDate + " 10:00");
-    segment.set("departure_airport", dep);
-    ObjectNode arr = MAPPER.createObjectNode();
-    arr.put("id", "CDG");
-    arr.put("name", "CDG Airport");
-    arr.put("time", arrDate + " 18:00");
-    segment.set("arrival_airport", arr);
-    segment.put("airline", "TestAir");
+  private static JsonObject createFlight(String depDate, String arrDate) {
+    JsonObject flight = new JsonObject();
+    flight.addProperty("price", 200);
+    flight.addProperty("total_duration", 480);
+    JsonArray flights = new JsonArray();
+    JsonObject segment = new JsonObject();
+    JsonObject dep = new JsonObject();
+    dep.addProperty("id", "JFK");
+    dep.addProperty("name", "JFK Airport");
+    dep.addProperty("time", depDate + " 10:00");
+    segment.add("departure_airport", dep);
+    JsonObject arr = new JsonObject();
+    arr.addProperty("id", "CDG");
+    arr.addProperty("name", "CDG Airport");
+    arr.addProperty("time", arrDate + " 18:00");
+    segment.add("arrival_airport", arr);
+    segment.addProperty("airline", "TestAir");
     flights.add(segment);
-    flight.set("flights", flights);
+    flight.add("flights", flights);
     return flight;
   }
 }

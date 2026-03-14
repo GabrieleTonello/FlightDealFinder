@@ -4,13 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flightdeal.generated.model.TimeWindow;
 import com.flightdeal.proxy.CalendarApiException;
 import com.flightdeal.proxy.GoogleCalendarClient;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,11 +18,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/** Unit tests for CalendarService with JsonNode-based flights. */
+/** Unit tests for CalendarService with JsonObject-based flights. */
 @ExtendWith(MockitoExtension.class)
 class CalendarServiceTest {
-
-  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @Mock private GoogleCalendarClient googleCalendarClient;
 
@@ -35,33 +31,33 @@ class CalendarServiceTest {
     calendarService = new CalendarService(googleCalendarClient);
   }
 
-  static JsonNode flight(String depTime, String arrTime) {
-    ObjectNode node = MAPPER.createObjectNode();
-    node.put("price", 200);
-    ArrayNode flights = MAPPER.createArrayNode();
-    ObjectNode segment = MAPPER.createObjectNode();
+  static JsonObject flight(String depTime, String arrTime) {
+    JsonObject node = new JsonObject();
+    node.addProperty("price", 200);
+    JsonArray flights = new JsonArray();
+    JsonObject segment = new JsonObject();
 
-    ObjectNode depAirport = MAPPER.createObjectNode();
-    depAirport.put("id", "JFK");
-    depAirport.put("name", "JFK Airport");
-    depAirport.put("time", depTime);
-    segment.set("departure_airport", depAirport);
+    JsonObject depAirport = new JsonObject();
+    depAirport.addProperty("id", "JFK");
+    depAirport.addProperty("name", "JFK Airport");
+    depAirport.addProperty("time", depTime);
+    segment.add("departure_airport", depAirport);
 
-    ObjectNode arrAirport = MAPPER.createObjectNode();
-    arrAirport.put("id", "CDG");
-    arrAirport.put("name", "CDG Airport");
-    arrAirport.put("time", arrTime);
-    segment.set("arrival_airport", arrAirport);
+    JsonObject arrAirport = new JsonObject();
+    arrAirport.addProperty("id", "CDG");
+    arrAirport.addProperty("name", "CDG Airport");
+    arrAirport.addProperty("time", arrTime);
+    segment.add("arrival_airport", arrAirport);
 
-    segment.put("airline", "TestAir");
+    segment.addProperty("airline", "TestAir");
     flights.add(segment);
-    node.set("flights", flights);
+    node.add("flights", flights);
     return node;
   }
 
   @Test
   void lookupFreeWindows_successfulLookup_returnsFreeWindows() throws CalendarApiException {
-    List<JsonNode> flights = List.of(flight("2025-07-01 10:00", "2025-07-10 18:00"));
+    List<JsonObject> flights = List.of(flight("2025-07-01 10:00", "2025-07-10 18:00"));
     List<TimeWindow> expectedWindows =
         List.of(
             TimeWindow.builder().startDate("2025-07-01").endDate("2025-07-05").build(),
@@ -78,7 +74,7 @@ class CalendarServiceTest {
 
   @Test
   void lookupFreeWindows_multipleFlights_computesCorrectDateRange() throws CalendarApiException {
-    List<JsonNode> flights =
+    List<JsonObject> flights =
         List.of(
             flight("2025-07-15 10:00", "2025-07-20 18:00"),
             flight("2025-07-01 10:00", "2025-07-25 18:00"),
@@ -113,7 +109,7 @@ class CalendarServiceTest {
   @Test
   void lookupFreeWindows_calendarApiException_wrappedAsRuntimeException()
       throws CalendarApiException {
-    List<JsonNode> flights = List.of(flight("2025-07-01 10:00", "2025-07-10 18:00"));
+    List<JsonObject> flights = List.of(flight("2025-07-01 10:00", "2025-07-10 18:00"));
 
     CalendarApiException apiException =
         new CalendarApiException("Service unavailable", "HTTP_ERROR");

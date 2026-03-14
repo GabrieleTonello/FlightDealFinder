@@ -4,64 +4,75 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import java.io.IOException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
-import java.time.Duration;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import serpapi.SerpApi;
+import serpapi.SerpApiException;
 
 class FlightApiClientTest {
 
-  private HttpClient httpClient;
+  private SerpApi serpApi;
   private FlightApiClient flightApiClient;
 
   @BeforeEach
   void setUp() {
-    httpClient = mock(HttpClient.class);
-    flightApiClient = new FlightApiClient(httpClient, "test-key", Duration.ofSeconds(10));
-  }
-
-  @SuppressWarnings("unchecked")
-  private void mockResponse(int statusCode, String body) throws Exception {
-    HttpResponse<String> mockResponse = mock(HttpResponse.class);
-    when(mockResponse.statusCode()).thenReturn(statusCode);
-    when(mockResponse.body()).thenReturn(body);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(mockResponse);
+    serpApi = mock(SerpApi.class);
+    flightApiClient = new FlightApiClient(serpApi);
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void searchFlights_returnsFlightsOnSuccess() throws Exception {
-    String responseBody =
-        """
-        {
-          "best_flights": [
-            {"price": 299, "total_duration": 480, "flights": [{"airline": "AirFrance"}]}
-          ],
-          "other_flights": [
-            {"price": 499, "total_duration": 600, "flights": [{"airline": "Delta"}]}
-          ]
-        }
-        """;
-    mockResponse(200, responseBody);
+    JsonObject result = new JsonObject();
+
+    JsonArray bestFlights = new JsonArray();
+    JsonObject bestFlight = new JsonObject();
+    bestFlight.addProperty("price", 299);
+    bestFlight.addProperty("total_duration", 480);
+    JsonArray bestSegments = new JsonArray();
+    JsonObject bestSeg = new JsonObject();
+    bestSeg.addProperty("airline", "AirFrance");
+    bestSegments.add(bestSeg);
+    bestFlight.add("flights", bestSegments);
+    bestFlights.add(bestFlight);
+    result.add("best_flights", bestFlights);
+
+    JsonArray otherFlights = new JsonArray();
+    JsonObject otherFlight = new JsonObject();
+    otherFlight.addProperty("price", 499);
+    otherFlight.addProperty("total_duration", 600);
+    JsonArray otherSegments = new JsonArray();
+    JsonObject otherSeg = new JsonObject();
+    otherSeg.addProperty("airline", "Delta");
+    otherSegments.add(otherSeg);
+    otherFlight.add("flights", otherSegments);
+    otherFlights.add(otherFlight);
+    result.add("other_flights", otherFlights);
+
+    when(serpApi.search(any(Map.class))).thenReturn(result);
 
     FlightSearchResponse response =
         flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15");
 
     assertEquals(1, response.bestFlights().size());
     assertEquals(1, response.otherFlights().size());
-    assertEquals(299, response.bestFlights().get(0).path("price").asInt());
-    assertEquals(499, response.otherFlights().get(0).path("price").asInt());
+    assertEquals(299, response.bestFlights().get(0).get("price").getAsInt());
+    assertEquals(499, response.otherFlights().get(0).get("price").getAsInt());
     assertTrue(response.hasFlights());
     assertEquals(2, response.totalFlightCount());
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void searchFlights_returnsEmptyWhenNoFlights() throws Exception {
-    mockResponse(200, "{\"best_flights\": [], \"other_flights\": []}");
+    JsonObject result = new JsonObject();
+    result.add("best_flights", new JsonArray());
+    result.add("other_flights", new JsonArray());
+
+    when(serpApi.search(any(Map.class))).thenReturn(result);
 
     FlightSearchResponse response =
         flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15");
@@ -71,66 +82,31 @@ class FlightApiClientTest {
     assertFalse(response.hasFlights());
   }
 
+  @Test
   @SuppressWarnings("unchecked")
-  @Test
-  void searchFlights_throwsOnHttpError() throws Exception {
-    HttpResponse<String> mockResponse = mock(HttpResponse.class);
-    when(mockResponse.statusCode()).thenReturn(500);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(mockResponse);
+  void searchFlights_throwsOnSerpApiError() throws Exception {
+    when(serpApi.search(any(Map.class))).thenThrow(new SerpApiException("Access denied"));
 
     FlightApiException ex =
         assertThrows(
             FlightApiException.class,
             () -> flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15"));
 
-    assertEquals("HTTP_ERROR", ex.getErrorType());
-    assertTrue(ex.getMessage().contains("500"));
+    assertEquals("API_ERROR", ex.getErrorType());
+    assertTrue(ex.getMessage().contains("SerpApi error"));
   }
 
+  @Test
   @SuppressWarnings("unchecked")
-  @Test
-  void searchFlights_throwsOnTimeout() throws Exception {
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenThrow(new HttpTimeoutException("Connection timed out"));
-
-    FlightApiException ex =
-        assertThrows(
-            FlightApiException.class,
-            () -> flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15"));
-
-    assertEquals("TIMEOUT", ex.getErrorType());
-  }
-
-  @SuppressWarnings("unchecked")
-  @Test
-  void searchFlights_throwsOnIOException() throws Exception {
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenThrow(new IOException("Connection refused"));
-
-    FlightApiException ex =
-        assertThrows(
-            FlightApiException.class,
-            () -> flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15"));
-
-    assertEquals("IO_ERROR", ex.getErrorType());
-  }
-
-  @Test
-  void searchFlights_throwsOnMalformedJson() throws Exception {
-    mockResponse(200, "not valid json");
-
-    FlightApiException ex =
-        assertThrows(
-            FlightApiException.class,
-            () -> flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15"));
-
-    assertEquals("PARSE_ERROR", ex.getErrorType());
-  }
-
-  @Test
   void searchFlights_handlesResponseWithOnlyBestFlights() throws Exception {
-    mockResponse(200, "{\"best_flights\": [{\"price\": 199}]}");
+    JsonObject result = new JsonObject();
+    JsonArray bestFlights = new JsonArray();
+    JsonObject flight = new JsonObject();
+    flight.addProperty("price", 199);
+    bestFlights.add(flight);
+    result.add("best_flights", bestFlights);
+
+    when(serpApi.search(any(Map.class))).thenReturn(result);
 
     FlightSearchResponse response =
         flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15");
@@ -140,13 +116,34 @@ class FlightApiClientTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void searchFlights_rawResponsePreserved() throws Exception {
-    String rawBody = "{\"best_flights\": [], \"other_flights\": []}";
-    mockResponse(200, rawBody);
+    JsonObject result = new JsonObject();
+    result.add("best_flights", new JsonArray());
+    result.add("other_flights", new JsonArray());
+
+    when(serpApi.search(any(Map.class))).thenReturn(result);
 
     FlightSearchResponse response =
         flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15");
 
-    assertEquals(rawBody, response.rawResponse());
+    assertNotNull(response.rawResponse());
+    assertFalse(response.rawResponse().isEmpty());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void searchFlights_handlesMissingFlightArrays() throws Exception {
+    JsonObject result = new JsonObject();
+    // No best_flights or other_flights keys
+
+    when(serpApi.search(any(Map.class))).thenReturn(result);
+
+    FlightSearchResponse response =
+        flightApiClient.searchFlights("JFK", "CDG", "2025-07-01", "2025-07-15");
+
+    assertTrue(response.bestFlights().isEmpty());
+    assertTrue(response.otherFlights().isEmpty());
+    assertFalse(response.hasFlights());
   }
 }

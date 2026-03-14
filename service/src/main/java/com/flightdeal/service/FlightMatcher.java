@@ -1,7 +1,8 @@
 package com.flightdeal.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.flightdeal.generated.model.TimeWindow;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Comparator;
@@ -9,7 +10,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Compares flight deals (as JsonNode objects from SerpApi) against free calendar windows and
+ * Compares flight deals (as JsonObject objects from SerpApi) against free calendar windows and
  * returns matching deals sorted by price ascending.
  *
  * <p>A deal matches a window when the first segment's departure time date is on or after the window
@@ -23,13 +24,13 @@ public class FlightMatcher {
   public FlightMatcher() {}
 
   /**
-   * Matches flight deal JsonNodes against free calendar windows.
+   * Matches flight deal JsonObjects against free calendar windows.
    *
-   * @param flights the available flight deal JsonNodes from SerpApi
+   * @param flights the available flight deal JsonObjects from SerpApi
    * @param freeWindows the user's free calendar windows
    * @return matched flights sorted by price ascending, or empty list if none match
    */
-  public List<JsonNode> matchDeals(List<JsonNode> flights, List<TimeWindow> freeWindows) {
+  public List<JsonObject> matchDeals(List<JsonObject> flights, List<TimeWindow> freeWindows) {
     if (flights == null || flights.isEmpty() || freeWindows == null || freeWindows.isEmpty()) {
       log.info(
           "No matches possible: flights={}, freeWindows={}",
@@ -38,10 +39,12 @@ public class FlightMatcher {
       return List.of();
     }
 
-    List<JsonNode> matched =
+    List<JsonObject> matched =
         flights.stream()
             .filter(flight -> fitsAnyWindow(flight, freeWindows))
-            .sorted(Comparator.comparingInt(f -> f.path("price").asInt(Integer.MAX_VALUE)))
+            .sorted(
+                Comparator.comparingInt(
+                    f -> f.has("price") ? f.get("price").getAsInt() : Integer.MAX_VALUE))
             .toList();
 
     if (matched.isEmpty()) {
@@ -60,11 +63,11 @@ public class FlightMatcher {
     return matched;
   }
 
-  private boolean fitsAnyWindow(JsonNode flight, List<TimeWindow> windows) {
+  private boolean fitsAnyWindow(JsonObject flight, List<TimeWindow> windows) {
     return windows.stream().anyMatch(window -> fitsWindow(flight, window));
   }
 
-  private boolean fitsWindow(JsonNode flight, TimeWindow window) {
+  private boolean fitsWindow(JsonObject flight, TimeWindow window) {
     String departureDate = extractDepartureDate(flight);
     String arrivalDate = extractArrivalDate(flight);
 
@@ -76,22 +79,37 @@ public class FlightMatcher {
         && arrivalDate.compareTo(window.getEndDate()) <= 0;
   }
 
-  private String extractDepartureDate(JsonNode flight) {
-    JsonNode flightsArray = flight.path("flights");
-    if (!flightsArray.isArray() || flightsArray.isEmpty()) {
+  private String extractDepartureDate(JsonObject flight) {
+    if (!flight.has("flights") || !flight.get("flights").isJsonArray()) {
       return null;
     }
-    String time = flightsArray.get(0).path("departure_airport").path("time").asText(null);
+    JsonArray flightsArray = flight.getAsJsonArray("flights");
+    if (flightsArray.size() == 0) {
+      return null;
+    }
+    JsonObject firstSegment = flightsArray.get(0).getAsJsonObject();
+    if (!firstSegment.has("departure_airport")) {
+      return null;
+    }
+    JsonObject depAirport = firstSegment.getAsJsonObject("departure_airport");
+    String time = depAirport.has("time") ? depAirport.get("time").getAsString() : null;
     return extractDatePart(time);
   }
 
-  private String extractArrivalDate(JsonNode flight) {
-    JsonNode flightsArray = flight.path("flights");
-    if (!flightsArray.isArray() || flightsArray.isEmpty()) {
+  private String extractArrivalDate(JsonObject flight) {
+    if (!flight.has("flights") || !flight.get("flights").isJsonArray()) {
       return null;
     }
-    String time =
-        flightsArray.get(flightsArray.size() - 1).path("arrival_airport").path("time").asText(null);
+    JsonArray flightsArray = flight.getAsJsonArray("flights");
+    if (flightsArray.size() == 0) {
+      return null;
+    }
+    JsonObject lastSegment = flightsArray.get(flightsArray.size() - 1).getAsJsonObject();
+    if (!lastSegment.has("arrival_airport")) {
+      return null;
+    }
+    JsonObject arrAirport = lastSegment.getAsJsonObject("arrival_airport");
+    String time = arrAirport.has("time") ? arrAirport.get("time").getAsString() : null;
     return extractDatePart(time);
   }
 

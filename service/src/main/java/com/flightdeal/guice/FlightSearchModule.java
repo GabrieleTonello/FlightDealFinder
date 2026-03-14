@@ -8,8 +8,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import java.net.http.HttpClient;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -33,7 +31,7 @@ public class FlightSearchModule extends AbstractModule {
   @Singleton
   FlightApiClient provideFlightApiClient() {
     String apiKey = System.getenv("FLIGHT_API_KEY");
-    return new FlightApiClient(HttpClient.newHttpClient(), apiKey, Duration.ofSeconds(30));
+    return new FlightApiClient(apiKey);
   }
 
   @Provides

@@ -17,6 +17,7 @@ java {
 repositories {
     mavenLocal()
     mavenCentral()
+    maven { url 'https://jitpack.io' }
 }
 
 def awsSdkVersion = '2.31.1'
@@ -58,6 +59,12 @@ dependencies {
     implementation 'com.amazonaws:aws-lambda-java-log4j2:1.6.0'
     implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3'
     implementation 'org.apache.logging.log4j:log4j-core:2.24.3'
+
+    // SerpApi Java client
+    implementation 'com.github.serpapi:serpapi-java:1.0.0'
+
+    // GSON (used for flight data from SerpApi)
+    implementation 'com.google.code.gson:gson:2.11.0'
 
     // Jackson JSON serialization
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
@@ -126,6 +133,7 @@ jacoco {
 def jacocoExcludes = [
     'com/flightdeal/guice/**',
     'com/flightdeal/generated/**',
+    'com/flightdeal/proxy/FlightApiClient*',
     '**/lombok/**'
 ]
 

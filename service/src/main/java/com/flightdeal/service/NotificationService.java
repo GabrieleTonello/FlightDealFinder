@@ -1,6 +1,7 @@
 package com.flightdeal.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
@@ -18,7 +19,7 @@ import software.amazon.awssdk.services.ses.model.SendEmailResponse;
  * Sends email notifications for matched flight deals via Amazon SES.
  *
  * <p>Formats an email body containing price, airline, airports, times, and duration for each
- * matched deal (JsonNode from SerpApi), then sends it to the configured recipient. Throws
+ * matched deal (JsonObject from SerpApi), then sends it to the configured recipient. Throws
  * RuntimeException on failure so that Step Functions retry policies can handle transient errors.
  */
 @Slf4j
@@ -42,11 +43,11 @@ public class NotificationService {
   /**
    * Sends an email notification with the matched flight deals.
    *
-   * @param matchedFlights the list of matched flight deal JsonNodes to include in the email
+   * @param matchedFlights the list of matched flight deal JsonObjects to include in the email
    * @return the SES message ID
    * @throws RuntimeException if the email fails to send
    */
-  public String sendDealNotification(List<JsonNode> matchedFlights) {
+  public String sendDealNotification(List<JsonObject> matchedFlights) {
     log.info(
         "Sending deal notification with {} matched flights to {}",
         matchedFlights.size(),
@@ -83,38 +84,45 @@ public class NotificationService {
     }
   }
 
-  String formatEmailBody(List<JsonNode> flights) {
+  String formatEmailBody(List<JsonObject> flights) {
     var sb = new StringBuilder();
     sb.append("Great news! We found flight deals that match your calendar availability.\n\n");
 
     for (int i = 0; i < flights.size(); i++) {
-      JsonNode flight = flights.get(i);
-      int price = flight.path("price").asInt(0);
-      int totalDuration = flight.path("total_duration").asInt(0);
+      JsonObject flight = flights.get(i);
+      int price = flight.has("price") ? flight.get("price").getAsInt() : 0;
+      int totalDuration =
+          flight.has("total_duration") ? flight.get("total_duration").getAsInt() : 0;
 
-      JsonNode flightsArray = flight.path("flights");
       String airline = "";
       String depAirport = "";
       String depTime = "";
       String arrAirport = "";
       String arrTime = "";
 
-      if (flightsArray.isArray() && !flightsArray.isEmpty()) {
-        JsonNode firstSeg = flightsArray.get(0);
-        JsonNode lastSeg = flightsArray.get(flightsArray.size() - 1);
-        airline = firstSeg.path("airline").asText("");
-        depAirport =
-            firstSeg.path("departure_airport").path("name").asText("")
-                + " ("
-                + firstSeg.path("departure_airport").path("id").asText("")
-                + ")";
-        depTime = firstSeg.path("departure_airport").path("time").asText("");
-        arrAirport =
-            lastSeg.path("arrival_airport").path("name").asText("")
-                + " ("
-                + lastSeg.path("arrival_airport").path("id").asText("")
-                + ")";
-        arrTime = lastSeg.path("arrival_airport").path("time").asText("");
+      if (flight.has("flights") && flight.get("flights").isJsonArray()) {
+        JsonArray flightsArray = flight.getAsJsonArray("flights");
+        if (flightsArray.size() > 0) {
+          JsonObject firstSeg = flightsArray.get(0).getAsJsonObject();
+          JsonObject lastSeg = flightsArray.get(flightsArray.size() - 1).getAsJsonObject();
+          airline = firstSeg.has("airline") ? firstSeg.get("airline").getAsString() : "";
+
+          if (firstSeg.has("departure_airport")) {
+            JsonObject dep = firstSeg.getAsJsonObject("departure_airport");
+            String depName = dep.has("name") ? dep.get("name").getAsString() : "";
+            String depId = dep.has("id") ? dep.get("id").getAsString() : "";
+            depAirport = depName + " (" + depId + ")";
+            depTime = dep.has("time") ? dep.get("time").getAsString() : "";
+          }
+
+          if (lastSeg.has("arrival_airport")) {
+            JsonObject arr = lastSeg.getAsJsonObject("arrival_airport");
+            String arrName = arr.has("name") ? arr.get("name").getAsString() : "";
+            String arrId = arr.has("id") ? arr.get("id").getAsString() : "";
+            arrAirport = arrName + " (" + arrId + ")";
+            arrTime = arr.has("time") ? arr.get("time").getAsString() : "";
+          }
+        }
       }
 
       sb.append(String.format("Deal %d:\n", i + 1));

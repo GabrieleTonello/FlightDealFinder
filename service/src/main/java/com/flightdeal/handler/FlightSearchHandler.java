@@ -2,7 +2,6 @@ package com.flightdeal.handler;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.flightdeal.dao.PriceRecordDao;
 import com.flightdeal.dao.PriceRecordEntity;
 import com.flightdeal.guice.FlightSearchModule;
@@ -10,6 +9,8 @@ import com.flightdeal.metrics.MetricsEmitter;
 import com.flightdeal.proxy.FlightApiClient;
 import com.flightdeal.proxy.FlightApiException;
 import com.flightdeal.proxy.FlightSearchResponse;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -153,13 +154,13 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
     String timestamp = Instant.now().toString();
     List<PriceRecordEntity> entities = new ArrayList<>();
 
-    for (JsonNode flight : response.bestFlights()) {
+    for (JsonObject flight : response.bestFlights()) {
       PriceRecordEntity entity = parseFlightNode(flight, route, timestamp, "best");
       if (entity != null) {
         entities.add(entity);
       }
     }
-    for (JsonNode flight : response.otherFlights()) {
+    for (JsonObject flight : response.otherFlights()) {
       PriceRecordEntity entity = parseFlightNode(flight, route, timestamp, "other");
       if (entity != null) {
         entities.add(entity);
@@ -169,33 +170,49 @@ public class FlightSearchHandler implements RequestHandler<Object, Map<String, O
   }
 
   PriceRecordEntity parseFlightNode(
-      JsonNode flight, String route, String timestamp, String dealType) {
+      JsonObject flight, String route, String timestamp, String dealType) {
     try {
-      int price = flight.path("price").asInt(0);
-      int totalDuration = flight.path("total_duration").asInt(0);
+      int price = flight.has("price") ? flight.get("price").getAsInt() : 0;
+      int totalDuration =
+          flight.has("total_duration") ? flight.get("total_duration").getAsInt() : 0;
 
-      JsonNode flightsArray = flight.path("flights");
-      if (!flightsArray.isArray() || flightsArray.isEmpty()) {
+      if (!flight.has("flights") || !flight.get("flights").isJsonArray()) {
+        return null;
+      }
+      JsonArray flightsArray = flight.getAsJsonArray("flights");
+      if (flightsArray.size() == 0) {
         return null;
       }
 
-      JsonNode firstSegment = flightsArray.get(0);
-      JsonNode lastSegment = flightsArray.get(flightsArray.size() - 1);
+      JsonObject firstSegment = flightsArray.get(0).getAsJsonObject();
+      JsonObject lastSegment = flightsArray.get(flightsArray.size() - 1).getAsJsonObject();
 
-      String depAirportId = firstSegment.path("departure_airport").path("id").asText("");
-      String depAirportName = firstSegment.path("departure_airport").path("name").asText("");
-      String depTime = firstSegment.path("departure_airport").path("time").asText("");
-      String arrAirportId = lastSegment.path("arrival_airport").path("id").asText("");
-      String arrAirportName = lastSegment.path("arrival_airport").path("name").asText("");
-      String arrTime = lastSegment.path("arrival_airport").path("time").asText("");
-      String airline = firstSegment.path("airline").asText("");
-      String flightNumber = firstSegment.path("flight_number").asText("");
+      JsonObject depAirport =
+          firstSegment.has("departure_airport")
+              ? firstSegment.getAsJsonObject("departure_airport")
+              : new JsonObject();
+      JsonObject arrAirport =
+          lastSegment.has("arrival_airport")
+              ? lastSegment.getAsJsonObject("arrival_airport")
+              : new JsonObject();
+
+      String depAirportId = depAirport.has("id") ? depAirport.get("id").getAsString() : "";
+      String depAirportName = depAirport.has("name") ? depAirport.get("name").getAsString() : "";
+      String depTime = depAirport.has("time") ? depAirport.get("time").getAsString() : "";
+      String arrAirportId = arrAirport.has("id") ? arrAirport.get("id").getAsString() : "";
+      String arrAirportName = arrAirport.has("name") ? arrAirport.get("name").getAsString() : "";
+      String arrTime = arrAirport.has("time") ? arrAirport.get("time").getAsString() : "";
+      String airline = firstSegment.has("airline") ? firstSegment.get("airline").getAsString() : "";
+      String flightNumber =
+          firstSegment.has("flight_number") ? firstSegment.get("flight_number").getAsString() : "";
       int segments = flightsArray.size();
 
       Integer carbonEmissionsValue = null;
-      JsonNode carbonNode = flight.path("carbon_emissions").path("this_flight");
-      if (!carbonNode.isMissingNode()) {
-        carbonEmissionsValue = carbonNode.asInt();
+      if (flight.has("carbon_emissions")) {
+        JsonObject carbonObj = flight.getAsJsonObject("carbon_emissions");
+        if (carbonObj.has("this_flight")) {
+          carbonEmissionsValue = carbonObj.get("this_flight").getAsInt();
+        }
       }
 
       return PriceRecordEntity.builder()

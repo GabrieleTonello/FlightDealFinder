@@ -55,6 +55,7 @@ export class FlightDealPipeline extends cdk.Stack {
         ...(isDevStage && {
           post: [
             new pipelines.ShellStep('IntegrationTests', {
+              input: source,
               commands: [
                 'cd integration-tests',
                 './gradlew test',

@@ -21,7 +21,14 @@ export class FlightDealPipeline extends cdk.Stack {
 
     const synthStep = new pipelines.ShellStep('Synth', {
       input: source,
+      installCommands: [
+        'yum install -y java-21-amazon-corretto-devel',
+        'export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto',
+        'export PATH=$JAVA_HOME/bin:$PATH',
+      ],
       commands: [
+        'export JAVA_HOME=/usr/lib/jvm/java-21-amazon-corretto',
+        'export PATH=$JAVA_HOME/bin:$PATH',
         'cd service && ./gradlew clean build && cd ..',
         'cd infra && npm ci && npm run build && npx cdk synth',
       ],

@@ -34,6 +34,7 @@ class MetricsAccuracyPropertyTest {
       case "StartFailures" -> emitter.emitStartFailures(input.value);
       case "MatchesFound" -> emitter.emitMatchesFound(input.value);
       case "NotificationsSent" -> emitter.emitNotificationsSent(input.value);
+      default -> throw new IllegalArgumentException("Unknown metric type: " + input.metricType);
     }
 
     ArgumentCaptor<PutMetricDataRequest> captor =

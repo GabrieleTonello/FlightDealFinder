@@ -7,6 +7,12 @@
   <property name="severity" value="warning"/>
   <property name="fileExtensions" value="java"/>
 
+  <!-- Suppress specific checks for test files -->
+  <module name="SuppressionSingleFilter">
+    <property name="files" value=".*[/\\]test[/\\].*"/>
+    <property name="checks" value="MethodName|AvoidStarImport"/>
+  </module>
+
   <!-- File length -->
   <module name="FileLength">
     <property name="max" value="500"/>

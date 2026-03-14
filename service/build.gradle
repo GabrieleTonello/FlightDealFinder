@@ -191,11 +191,7 @@ checkstyle {
     maxWarnings = 0
 }
 
-// Exclude Smithy-generated code and test files from Checkstyle
+// Exclude Smithy-generated code from Checkstyle
 tasks.withType(Checkstyle).configureEach {
     exclude '**/generated/**'
-}
-
-checkstyleTest {
-    enabled = false
 }
